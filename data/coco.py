@@ -92,7 +92,7 @@ class COCODetection(data.Dataset):
                 'Path does not exist: {}'.format(image_path)
         if '2017' in name:
             file_name = str(index).zfill(12) + '.jpg'
-            image_path = os.path.join(self.root, name, file_name)
+            image_path = os.path.join(self.root, 'images', name, file_name)
             assert os.path.exists(image_path), \
                 'Path does not exist: {}'.format(image_path)
         return image_path
@@ -100,7 +100,7 @@ class COCODetection(data.Dataset):
     def _get_ann_file(self, name):
         prefix = 'instances' if name.find('test') == -1 \
             else 'image_info'
-        return os.path.join(self.root, 'original_annotations',
+        return os.path.join(self.root, 'annotations',
                             prefix + '_' + name + '.json')
 
     def _load_coco_annotations(self, coco_name, indexes, _COCO):
