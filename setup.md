@@ -1,19 +1,16 @@
-
 ### setup by docker image
-docker run --network host --ipc host -v /home/fulingzhi/workspace/PytorchSSD:/app -v /mnt/gf_mnt/datasets/cocoapi:/mnt/dataset/coco -it --rm floydhub/pytorch:0.3.0-gpu.cuda9cudnn7-py3.22 bash
+
+docker run --network host --ipc host -v /home/fulingzhi/workspace/PytorchSSD:/app -v /mnt/gf_mnt/datasets/cocoapi:/mnt/dataset/coco -it --rm floydhub/pytorch:0.3.0-gpu.cuda9cudnn7-py3.22-dev bash
 
 ### training
 
-pip install git+https://github.com/szagoruyko/pyinn.git@master
-
 python train_test.py -d COCO -v RFB_mobile -s 300 --ngpu 1 --basenet weights/pretrained/mobilenet_feature.pth
 
-python train_test.py -d COCO -v RFB_vgg -s 300 --ngpu 1 --basenet weights/pretrained/vgg16_reducedfc.pth
+python train_test.py -d COCO -v RFB_vgg -s 300 --batch_size 14 --visdom True --send_images_to_visdom False --cuda True --ngpu 1 --basenet weights/pretrained/vgg16_reducedfc.pth
 
-
+python train_test.py -d COCO -v RFB_vgg -s 300 --batch_size 14 --visdom True --send_images_to_visdom False --cuda False --basenet weights/pretrained/vgg16_reducedfc.pth
 
 ### troubleshoot
-
 
 #### pyinn
 
@@ -51,3 +48,26 @@ ConnectionRefusedError: [Errno 111] Connection refused
 
 https://github.com/pytorch/pytorch#docker-image
 http://noahsnail.com/2018/01/15/2018-01-15-PyTorch%20socket.error%20[Errno%20111]%20Connection%20refused/
+
+
+#### data training
+
+```
+Traceback (most recent call last):
+  File "train_test.py", line 456, in <module>
+    train()
+  File "train_test.py", line 307, in train
+    images, targets = next(batch_iterator)
+  File "/usr/local/lib/python3.6/site-packages/torch/utils/data/dataloader.py", line 196, in __next__
+    return self._process_next_batch(batch)
+  File "/usr/local/lib/python3.6/site-packages/torch/utils/data/dataloader.py", line 230, in _process_next_batch
+    raise batch.exc_type(batch.exc_msg)
+AttributeError: Traceback (most recent call last):
+  File "/usr/local/lib/python3.6/site-packages/torch/utils/data/dataloader.py", line 42, in _worker_loop
+    samples = collate_fn([dataset[i] for i in batch_indices])
+  File "/usr/local/lib/python3.6/site-packages/torch/utils/data/dataloader.py", line 42, in <listcomp>
+    samples = collate_fn([dataset[i] for i in batch_indices])
+  File "/app/data/coco.py", line 167, in __getitem__
+    height, width, _ = img.shape
+AttributeError: 'NoneType' object has no attribute 'shape'
+```
