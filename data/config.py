@@ -4,7 +4,7 @@
 
 # note: if you used our download scripts, this should be right
 VOCroot = '/home/user/Database/VOCdevkit'  # path to VOCdevkit root dir
-COCOroot = '/home/user/Database/MSCOCO2017'
+COCOroot = '/mnt/dataset/coco'
 
 # RFB CONFIGS
 VOC_300 = {
