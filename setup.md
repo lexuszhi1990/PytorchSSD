@@ -1,14 +1,21 @@
 ### setup by docker image
 
+on 177 server:
 docker run --network host --ipc host -v /home/fulingzhi/workspace/PytorchSSD:/app -v /mnt/gf_mnt/datasets/cocoapi:/mnt/dataset/coco -it --rm floydhub/pytorch:0.3.0-gpu.cuda9cudnn7-py3.22-dev bash
 
-### training
+on 172 server:
+docker run --network host --ipc host -v /home/david/fashionAI/PytorchSSD:/app -v /data/david/cocoapi:/mnt/dataset/coco -v /data/david/models/pytorchSSD:/mnt/ckpt/pytorchSSD -it --rm floydhub/pytorch:0.3.0-gpu.cuda9cudnn7-py3.22-dev bash
 
-python train_test.py -d COCO -v RFB_mobile -s 300 --ngpu 1 --basenet weights/pretrained/mobilenet_feature.pth
+### daily log
 
-python train_test.py -d COCO -v RFB_vgg -s 300 --batch_size 14 --visdom True --send_images_to_visdom False --cuda True --ngpu 1 --basenet weights/pretrained/vgg16_reducedfc.pth
+#### 2018.5.16
 
-python train_test.py -d COCO -v RFB_vgg -s 300 --batch_size 14 --visdom True --send_images_to_visdom False --cuda False --basenet weights/pretrained/vgg16_reducedfc.pth
+train RFB_SSD:
+python train_test.py -d COCO -v RFB_vgg -s 300 --batch_size 14 --visdom True --send_images_to_visdom False --basenet weights/pretrained/vgg16_reducedfc.pth --gpu_ids 0 --save_folder /mnt/ckpt/pytorchSSD --date RFB_vgg_0516
+
+train refinedet_SSD:
+python refinedet_train_test.py -d COCO -v Refine_vgg -s 320 --batch_size 14 --visdom True --send_images_to_visdom False --basenet weights/pretrained/vgg16_reducedfc.pth --gpu_ids 1 --save_folder /mnt/ckpt/pytorchSSD --date refinedet_vgg_0516
+
 
 ### troubleshoot
 
@@ -71,3 +78,5 @@ AttributeError: Traceback (most recent call last):
     height, width, _ = img.shape
 AttributeError: 'NoneType' object has no attribute 'shape'
 ```
+
+solution: `./make.sh`
