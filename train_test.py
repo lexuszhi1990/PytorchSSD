@@ -43,7 +43,7 @@ parser.add_argument('--num_workers', default=4,
                     type=int, help='Number of workers used in dataloading')
 parser.add_argument('--cuda', default=True,
                     type=bool, help='Use cuda to train model')
-parser.add_argument('--ngpu', default=2, type=int, help='gpus')
+parser.add_argument('--gpu_ids', nargs='+', default=[], help='gpu id')
 parser.add_argument('--lr', '--learning-rate',
                     default=4e-3, type=float, help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
@@ -179,10 +179,8 @@ else:
         new_state_dict[name] = v
     net.load_state_dict(new_state_dict)
 
-if args.ngpu > 1:
-    net = torch.nn.DataParallel(net, device_ids=list(range(args.ngpu)))
-
-if args.cuda:
+if len(args.gpu_ids) > 0:
+    net = torch.nn.DataParallel(net, device_ids=[int(i) for i in args.gpu_ids])
     net.cuda()
     cudnn.benchmark = True
 
