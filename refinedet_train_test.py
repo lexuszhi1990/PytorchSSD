@@ -11,7 +11,8 @@ import argparse
 import numpy as np
 from torch.autograd import Variable
 import torch.utils.data as data
-from data import VOCroot, COCOroot,VOC_320, AnnotationTransform, COCODetection, VOCDetection, detection_collate, BaseTransform, preproc,VOC_512
+from data import VOCroot, COCOroot, VOC_300, VOC_512, COCO_300, COCO_320, COCO_512, COCO_mobile_300, AnnotationTransform, \
+    COCODetection, VOCDetection, detection_collate, BaseTransform, preproc
 #from layers.modules import MultiBoxLoss
 from layers.modules import RefineMultiBoxLoss
 from layers.functions import Detect,PriorBox
@@ -43,7 +44,6 @@ parser.add_argument('--num_workers', default=8,
                     type=int, help='Number of workers used in dataloading')
 parser.add_argument('--cuda', default=True,
                     type=bool, help='Use cuda to train model')
-# parser.add_argument('--gpu_id', default=[0,1], type=int, help='gpus')
 parser.add_argument('--gpu_ids', nargs='+', default=[], help='gpu id')
 parser.add_argument('--lr', '--learning-rate',
                     default=1e-3, type=float, help='initial learning rate')
@@ -74,7 +74,7 @@ parser.add_argument('--visdom', default=False, type=str2bool, help='Use visdom t
 parser.add_argument('--send_images_to_visdom', type=str2bool, default=False, help='Sample a random image from each 10th batch, send it to visdom after augmentations step')
 args = parser.parse_args()
 
-save_folder = os.path.join(args.save_folder,args.version+'_'+args.size,args.date)
+save_folder = os.path.join(args.save_folder, args.version+'_'+args.size, args.date)
 if not os.path.exists(save_folder):
     os.makedirs(save_folder)
 test_save_dir = os.path.join(save_folder,'ss_predict')
@@ -86,8 +86,8 @@ if args.dataset == 'VOC':
     train_sets = [('2007', 'trainval'), ('2012', 'trainval')]
     cfg = (VOC_320, VOC_512)[args.size == '512']
 else:
-    train_sets = [('2014', 'train'),('2014', 'valminusminival')]
-    cfg = (VOC_320, VOC_512)[args.size == '512']
+    train_sets = [('2017', 'train')]
+    cfg = (COCO_320, COCO_512)[args.size == '512']
 
 img_dim = (320,512)[args.size=='512']
 rgb_std = (1,1,1)
@@ -104,8 +104,7 @@ if args.visdom:
     viz = visdom.Visdom()
 
 from models.RefineSSD_vgg import build_net
-cfg = VOC_320
-net = build_net(320, num_classes,use_refine=True)
+net = build_net(320, num_classes, use_refine=True)
 print(net)
 if not args.resume_net:
     base_weights = torch.load(args.basenet)
@@ -155,6 +154,8 @@ else:
 
 if len(args.gpu_ids) > 0:
     net = torch.nn.DataParallel(net, device_ids=[int(i) for i in args.gpu_ids])
+
+if args.cuda:
     net.cuda()
     cudnn.benchmark = True
 
@@ -174,12 +175,12 @@ if args.dataset == 'VOC':
     testset = VOCDetection(
         VOCroot, [('2007', 'test')], None, AnnotationTransform())
     train_dataset = VOCDetection(VOCroot, train_sets, preproc(
-        img_dim, rgb_means, p), AnnotationTransform())
+        img_dim, rgb_means, rgb_std, p), AnnotationTransform())
 elif args.dataset == 'COCO':
     testset = COCODetection(
-        COCOroot, [('2014', 'minival')], None)
+        COCOroot, [('2017', 'val')], None)
     train_dataset = COCODetection(COCOroot, train_sets, preproc(
-        img_dim, rgb_means, p))
+        img_dim, rgb_means, rgb_std, p))
 else:
     print('Only VOC and COCO are supported now!')
     exit()

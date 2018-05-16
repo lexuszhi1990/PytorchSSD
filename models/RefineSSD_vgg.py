@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from layers import *
-from .base_models import vgg, vgg_base
+# from .base_models import vgg, vgg_base
 
 
 def vgg(cfg, i=3, batch_norm=False):
@@ -56,9 +56,9 @@ class RefineSSD(nn.Module):
     def __init__(self, size, num_classes, use_refine=False):
         super(RefineSSD, self).__init__()
         self.num_classes = num_classes
-        # TODO: implement __call__ in PriorBox
         self.size = size
         self.use_refine = use_refine
+        self.base_mbox = 3
 
         # SSD network
         self.base = nn.ModuleList(vgg(vgg_base['320'], 3))
@@ -73,25 +73,25 @@ class RefineSSD(nn.Module):
                                     nn.Conv2d(256, 512, kernel_size=3, stride=2, padding=1), nn.ReLU(inplace=True))
 
         if use_refine:
-            self.arm_loc = nn.ModuleList([nn.Conv2d(512, 12, kernel_size=3, stride=1, padding=1), \
-                                          nn.Conv2d(512, 12, kernel_size=3, stride=1, padding=1), \
-                                          nn.Conv2d(1024, 12, kernel_size=3, stride=1, padding=1), \
-                                          nn.Conv2d(512, 12, kernel_size=3, stride=1, padding=1), \
+            self.arm_loc = nn.ModuleList([nn.Conv2d(512, 4*self.base_mbox, kernel_size=3, stride=1, padding=1), \
+                                          nn.Conv2d(512, 4*self.base_mbox, kernel_size=3, stride=1, padding=1), \
+                                          nn.Conv2d(1024, 4*self.base_mbox, kernel_size=3, stride=1, padding=1), \
+                                          nn.Conv2d(512, 4*self.base_mbox, kernel_size=3, stride=1, padding=1), \
                                           ])
-            self.arm_conf = nn.ModuleList([nn.Conv2d(512, 6, kernel_size=3, stride=1, padding=1), \
-                                           nn.Conv2d(512, 6, kernel_size=3, stride=1, padding=1), \
-                                           nn.Conv2d(1024, 6, kernel_size=3, stride=1, padding=1), \
-                                           nn.Conv2d(512, 6, kernel_size=3, stride=1, padding=1), \
+            self.arm_conf = nn.ModuleList([nn.Conv2d(512, 2*self.base_mbox, kernel_size=3, stride=1, padding=1), \
+                                           nn.Conv2d(512, 2*self.base_mbox, kernel_size=3, stride=1, padding=1), \
+                                           nn.Conv2d(1024, 2*self.base_mbox, kernel_size=3, stride=1, padding=1), \
+                                           nn.Conv2d(512, 2*self.base_mbox, kernel_size=3, stride=1, padding=1), \
                                            ])
-        self.odm_loc = nn.ModuleList([nn.Conv2d(256, 12, kernel_size=3, stride=1, padding=1), \
-                                      nn.Conv2d(256, 12, kernel_size=3, stride=1, padding=1), \
-                                      nn.Conv2d(256, 12, kernel_size=3, stride=1, padding=1), \
-                                      nn.Conv2d(256, 12, kernel_size=3, stride=1, padding=1), \
+        self.odm_loc = nn.ModuleList([nn.Conv2d(256, 4*self.base_mbox, kernel_size=3, stride=1, padding=1), \
+                                      nn.Conv2d(256, 4*self.base_mbox, kernel_size=3, stride=1, padding=1), \
+                                      nn.Conv2d(256, 4*self.base_mbox, kernel_size=3, stride=1, padding=1), \
+                                      nn.Conv2d(256, 4*self.base_mbox, kernel_size=3, stride=1, padding=1), \
                                       ])
-        self.odm_conf = nn.ModuleList([nn.Conv2d(256, 63, kernel_size=3, stride=1, padding=1), \
-                                       nn.Conv2d(256, 63, kernel_size=3, stride=1, padding=1), \
-                                       nn.Conv2d(256, 63, kernel_size=3, stride=1, padding=1), \
-                                       nn.Conv2d(256, 63, kernel_size=3, stride=1, padding=1), \
+        self.odm_conf = nn.ModuleList([nn.Conv2d(256, self.num_classes*self.base_mbox, kernel_size=3, stride=1, padding=1), \
+                                       nn.Conv2d(256, self.num_classes*self.base_mbox, kernel_size=3, stride=1, padding=1), \
+                                       nn.Conv2d(256, self.num_classes*self.base_mbox, kernel_size=3, stride=1, padding=1), \
+                                       nn.Conv2d(256, self.num_classes*self.base_mbox, kernel_size=3, stride=1, padding=1), \
                                        ])
         self.trans_layers = nn.ModuleList([nn.Sequential(nn.Conv2d(512, 256, kernel_size=3, stride=1, padding=1),
                                                          nn.ReLU(inplace=True),
