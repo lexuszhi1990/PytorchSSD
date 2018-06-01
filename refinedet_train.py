@@ -119,9 +119,9 @@ if args.visdom:
 net = build_net(320, num_classes, use_refine=True)
 print(net)
 if not args.resume_net:
-    base_weights = torch.load(args.basenet)
-    print('Loading base network...')
-    net.base.load_state_dict(base_weights)
+    # base_weights = torch.load(args.basenet)
+    # print('Loading base network...')
+    # net.base.load_state_dict(base_weights)
 
     def xavier(param):
         init.xavier_uniform(param)
@@ -137,7 +137,8 @@ if not args.resume_net:
                 m.state_dict()[key][...] = 0
 
     print('Initializing weights...')
-# initialize newly added layers' weights with kaiming_normal method
+    # initialize newly added layers' weights with kaiming_normal method
+    net.base.apply(weights_init)
     net.extras.apply(weights_init)
     net.trans_layers.apply(weights_init)
     net.latent_layrs.apply(weights_init)
