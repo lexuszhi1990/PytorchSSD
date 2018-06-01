@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from torch.autograd import Variable
 from collections import OrderedDict
@@ -6,9 +7,12 @@ from data import COCOroot, VOC_300, VOC_512, COCO_300, COCO_320, COCO_512, COCO_
     COCODetection, VOCDetection, detection_collate, BaseTransform, preproc
 from models.RefineSSD_vgg import build_net
 from layers.functions import Detect,PriorBox
+from utils.nms_wrapper import nms
 
 ckpt_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/refinedet_vgg_0516/Refine_vgg_COCO_epoches_250.pth'
 num_classes=81
+
+image_id=31
 
 cfg = COCO_320
 priorbox = PriorBox(cfg)
@@ -16,7 +20,7 @@ detector = Detect(num_classes,0,cfg,object_score=0.01)
 priors = Variable(priorbox.forward(), volatile=True)
 
 testset = COCODetection(COCOroot, [('2017', 'val')], None)
-img = testset.pull_image(i)
+img = testset.pull_image(image_id)
 
 # >>> import cv2
 # >>> cv2.imwrite('asdasd.png', img)
@@ -33,6 +37,7 @@ for k, v in state_dict.items():
     else:
         name = k
     new_state_dict[name] = v
+
 net.load_state_dict(new_state_dict)
 
 rgb_std = (1,1,1)
@@ -46,6 +51,50 @@ arm_loc,arm_conf,odm_loc,odm_conf = out
 boxes, scores = detector.forward((odm_loc,odm_conf), priors,(arm_loc,arm_conf))
 boxes = boxes[0]
 scores=scores[0]
+
+boxes = boxes.cpu().numpy()
+scores = scores.cpu().numpy()
+# scale each detection back up to the image
+scale = torch.Tensor([img.shape[1], img.shape[0], img.shape[1], img.shape[0]]).cpu().numpy()
+boxes *= scale
+
+j=1
+thresh=0.55
+inds = np.where(scores[:, j] > thresh)[0]
+if len(inds) == 0:
+    all_boxes[j][i] = np.empty([0, 5], dtype=np.float32)
+    continue
+c_bboxes = boxes[inds]
+c_scores = scores[inds, j]
+c_dets = np.hstack((c_bboxes, c_scores[:, np.newaxis])).astype(
+    np.float32, copy=False)
+
+num_images = len(testset)
+all_boxes = [[[] for _ in range(num_images)] for _ in range(num_classes)]
+for j in range(1, num_classes):
+    inds = np.where(scores[:, j] > 0.1)[0]
+    if len(inds) == 0:
+        all_boxes[j][image_id] = np.empty([0, 5], dtype=np.float32)
+        continue
+    print("dets for class %d" % j)
+    c_bboxes = boxes[inds]
+    c_scores = scores[inds, j]
+    c_dets = np.hstack((c_bboxes, c_scores[:, np.newaxis])).astype(
+        np.float32, copy=False)
+    keep = nms(c_dets, 0.45, force_cpu=True)
+    keep = keep[:50]
+    c_dets = c_dets[keep, :]
+    all_boxes[j][image_id] = c_dets
+
+testset.evaluate_detections(all_boxes, save_folder)
+
+img_det=img.copy()
+left, top, right, bottom, score = all_boxes[59][0][0]
+cv2.rectangle(img_det, (left, top), (right, bottom), (255, 255, 0), 1)
+cv2.putText(img_det, '%.3f'%score, (int(left), int(top)+30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
+cv2.imwrite("./test_1.png", img_det)
+print("save results at %s" % save_path)
+
 
 def test_net(save_folder, net, detector, cuda, testset, transform, max_per_image=300, thresh=0.005):
 
@@ -77,7 +126,7 @@ def test_net(save_folder, net, detector, cuda, testset, transform, max_per_image
         _t['im_detect'].tic()
         out = net(x=x, test=True)  # forward pass
         arm_loc,arm_conf,odm_loc,odm_conf = out
-        boxes, scores = detector.forward((odm_loc,odm_conf), priors,(arm_loc,arm_conf))
+        boxes, scores = detector.forward((odm_loc, odm_conf), priors,(arm_loc,arm_conf))
         detect_time = _t['im_detect'].toc()
         boxes = boxes[0]
         scores=scores[0]
