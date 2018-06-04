@@ -5,7 +5,7 @@ from .utils.box_utils import decode, center_size
 
 class Detect(Function):
     """At test time, Detect is the final layer of SSD.  Decode location preds,
-    apply non-maximum suppression to location predictions based on conf
+    apply non-maximum suppression to location predictions based on confidence
     scores and threshold to a top_k number of output predictions for both
     confidence score and locations.
     """

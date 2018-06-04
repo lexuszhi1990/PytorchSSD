@@ -182,8 +182,6 @@ testset = COCODet(
     config.coco.root_path, config.coco.val_sets, None)
 train_dataset = COCODet(config.coco.root_path, config.coco.train_sets, preproc(img_dim, rgb_means, rgb_std, p))
 
-
-
 net.train()
 # loss counters
 loc_loss = 0  # epoch
@@ -196,8 +194,8 @@ max_iter = args.max_epoch * epoch_size
 
 stepvalues_VOC = (150 * epoch_size, 200 * epoch_size, 250 * epoch_size)
 stepvalues_COCO = (90 * epoch_size, 120 * epoch_size, 140 * epoch_size)
-stepvalues = (stepvalues_VOC,stepvalues_COCO)[args.dataset=='COCO']
-print('Training',args.version, 'on', train_dataset.name)
+stepvalues = (stepvalues_VOC, stepvalues_COCO)[args.dataset=='COCO']
+print('Training', args.version, 'on', train_dataset.name)
 step_index = 0
 
 if args.visdom:

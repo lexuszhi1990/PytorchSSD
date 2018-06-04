@@ -185,7 +185,6 @@ class RefineSSD(nn.Module):
         obm_conf = torch.cat([o.view(o.size(0), -1) for o in obm_conf_list], 1)
 
         # apply multibox head to source layers
-
         if test:
             if self.use_refine:
                 output = (
