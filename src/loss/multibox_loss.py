@@ -2,12 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-from utils.box_utils import match, log_sum_exp
-GPU = False
-if torch.cuda.is_available():
-    GPU = True
-    torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
+from src.utils.box_utils import match, log_sum_exp
 
 class MultiBoxLoss(nn.Module):
     """SSD Weighted Loss Function

@@ -17,8 +17,8 @@ import torch
 import torch.utils.data as data
 import torchvision.transforms as transforms
 
-from utils.pycocotools.coco import COCO
-from utils.pycocotools.cocoeval import COCOeval
+from src.utils.pycocotools.coco import COCO
+from src.utils.pycocotools.cocoeval import COCOeval
 
 
 class COCODet(data.Dataset):
