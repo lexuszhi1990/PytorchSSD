@@ -4,13 +4,24 @@ from easydict import EasyDict as edict
 
 config = edict()
 config.coco = edict()
-config.VOC = edict()
+config.voc = edict()
 
-config.VOC.VOCroot = '/home/user/Database/VOCdevkit'
+####################################################
+#           voc config
+####################################################
 
+config.voc.root_path = '/mnt/dataset/VOCdevkit'
+config.voc.train_sets = [('2012', 'train')]
+config.voc.val_sets = [('2012', 'val')]
+config.voc.base_stepvalues = [120, 150, 200]
+config.voc.img_dim = 320
+config.voc.rgb_std = (1,1,1)
+config.voc.rgb_means = (0, 0, 0)
+config.voc.augment_ratio = 0.2
+config.voc.num_classes = 21
 
 # RFB CONFIGS
-config.VOC.VOC_300 = {
+config.voc.dimension_300 = {
     'feature_maps': [38, 19, 10, 5, 3, 1],
 
     'min_dim': 300,
@@ -27,8 +38,7 @@ config.VOC.VOC_300 = {
 
     'clip': True,
 }
-
-config.VOC.VOC_320 = {
+config.voc.dimension_320 = {
     'feature_maps': [40, 20, 10, 5],
 
     'min_dim': 320,
@@ -46,7 +56,7 @@ config.VOC.VOC_320 = {
     'clip': True,
 }
 
-config.VOC.VOC_512 = {
+config.voc.dimension_512 = {
     'feature_maps': [64, 32, 16, 8, 4, 2, 1],
 
     'min_dim': 512,
@@ -63,6 +73,20 @@ config.VOC.VOC_512 = {
 
     'clip': True,
 }
+
+####################################################
+#           coco config
+####################################################
+
+config.coco.root_path = '/mnt/dataset/coco'
+config.coco.train_sets = [('2017', 'train')]
+config.coco.val_sets = [('2017', 'val')]
+config.coco.base_stepvalues = [90, 12, 140]
+config.coco.img_dim = 320
+config.coco.rgb_std = (1,1,1)
+config.coco.rgb_means = (0, 0, 0)
+config.coco.augment_ratio = 0.2
+config.coco.num_classes = 81
 
 config.coco.dimension_300 = {
     'feature_maps': [38, 19, 10, 5, 3, 1],
@@ -136,7 +160,3 @@ config.coco.dimension_320 = {
 
     'clip': True,
 }
-
-config.coco.root_path = '/mnt/dataset/coco'
-config.coco.train_sets = [('2017', 'train')]
-config.coco.val_sets = [('2017', 'val')]

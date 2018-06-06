@@ -6,58 +6,53 @@ import time
 import numpy as np
 import argparse
 import pickle
+import logging
+from pathlib import Path
+
+import visdom
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
-import torchvision.transforms as transforms
 import torch.nn.init as init
-from torch.autograd import Variable
 import torch.utils.data as data
+import torchvision.transforms as transforms
+from torch.autograd import Variable
+from torch.optim.lr_scheduler import MultiStepLR
 
 from src.config import config
 from src.data.data_augment import detection_collate, BaseTransform, preproc
 from src.data.coco import COCODet
+from src.data.voc import VOCDetection, AnnotationTransform
 from src.symbol.RefineSSD_vgg import build_net
 from src.loss import RefineMultiBoxLoss
 from src.detection import Detect
 from src.prior_box import PriorBox
-from src.utils import str2bool
+from src.utils import str2bool, setup_logger
 from src.utils.nms_wrapper import nms
 from src.utils.timer import Timer
 
 parser = argparse.ArgumentParser(
-    description='Receptive Field Block Net Training')
-parser.add_argument('-v', '--version', default='Refine_vgg',
-                    help='Refine_vgg')
-parser.add_argument('-s', '--size', default='320',
-                    help='320 or 512 input size.')
-parser.add_argument('-d', '--dataset', default='VOC',
-                    help='VOC or COCO dataset')
-parser.add_argument(
-    '--basenet', default='/mnt/lvmhdd1/zuoxin/ssd_pytorch_models/vgg16_reducedfc.pth', help='pretrained base model')
-#parser.add_argument(
-#    '--basenet', default='/mnt/lvmhdd1/zuoxin/ssd_pytorch_models/mb.pth', help='pretrained base model')
-parser.add_argument('--jaccard_threshold', default=0.5,
-                    type=float, help='Min Jaccard index for matching')
-parser.add_argument('-b', '--batch_size', default=32,
-                    type=int, help='Batch size for training')
-parser.add_argument('--num_workers', default=8,
-                    type=int, help='Number of workers used in dataloading')
-parser.add_argument('--cuda', default=True,
+    description='Refined SSD')
+parser.add_argument('--shape', default='320', help='320 or 512 input size.')
+parser.add_argument('--dataset', default='COCO', help='VOC or COCO dataset')
+parser.add_argument('--batch_size', default=32, type=int, help='Batch size for training')
+parser.add_argument('--jaccard_threshold', default=0.5, type=float, help='Min Jaccard index for matching')
+parser.add_argument('--num_workers', default=8, type=int, help='Number of workers used in dataloading')
+
+parser.add_argument('--cuda', default=False,
                     type=bool, help='Use cuda to train model')
 parser.add_argument('--gpu_ids', nargs='+', default=[], help='gpu id')
 parser.add_argument('--lr', '--learning-rate',
                     default=1e-3, type=float, help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
-
-parser.add_argument('--resume_net', default=False, help='resume net for retraining')
+parser.add_argument('--resume', default=False, help='resume net for retraining')
 parser.add_argument('--resume_epoch', default=0,
                     type=int, help='resume iter for retraining')
 
-parser.add_argument('-max','--max_epoch', default=300,
+parser.add_argument('--max_epoch', default=300,
                     type=int, help='max epoch for retraining')
-parser.add_argument('-we','--warm_epoch', default=1,
+parser.add_argument('--warm_epoch', default=1,
                     type=int, help='max epoch for retraining')
 parser.add_argument('--weight_decay', default=5e-4,
                     type=float, help='Weight decay for SGD')
@@ -65,265 +60,170 @@ parser.add_argument('--gamma', default=0.1,
                     type=float, help='Gamma update for SGD')
 parser.add_argument('--log_iters', default=True,
                     type=bool, help='Print the loss at each iteration')
-parser.add_argument('--save_folder', default='/mnt/lvmhdd1/zuoxin/ssd_pytorch_models/refine/',
-                    help='Location to save checkpoint models')
-parser.add_argument('--date',default='0327')
+parser.add_argument('--workspace', default='./workspace')
+parser.add_argument('--date', default='0327')
 parser.add_argument('--save_frequency',default=10)
 parser.add_argument('--retest', default=False, type=bool,
                     help='test cache results')
 parser.add_argument('--test_frequency',default=10)
 parser.add_argument('--visdom', default=False, type=str2bool, help='Use visdom to for loss visualization')
 parser.add_argument('--send_images_to_visdom', type=str2bool, default=False, help='Sample a random image from each 10th batch, send it to visdom after augmentations step')
-args = parser.parse_args()
+parser.add_argument('--basenet', default='/mnt/lvmhdd1/zuoxin/ssd_pytorch_models/vgg16_reducedfc.pth', help='pretrained base model')
 
-def adjust_learning_rate(optimizer, gamma, epoch, step_index, iteration, epoch_size):
-    """Sets the learning rate
-    # Adapted from PyTorch Imagenet example:
-    # https://github.com/pytorch/examples/blob/master/imagenet/main.py
-    """
-    if epoch < args.warm_epoch:
-        lr = 1e-6 + (args.lr-1e-6) * iteration / (epoch_size * args.warm_epoch)
+def train(workspace, train_dataset, val_dataset, priors, batch_size, shape, base_lr, momentum, weight_decay, gamma, gpu_ids, enable_cuda, warm_epoch, max_epoch, resume, resume_epoch, num_workers, save_frequency, enable_visdom):
+
+    if enable_visdom:
+        viz = visdom.Visdom()
+    if enable_cuda:
+        torch.set_default_tensor_type('torch.cuda.FloatTensor')
+        cudnn.benchmark = True
+
+    workspace_path = Path(workspace)
+    if not workspace_path.exists():
+        workspace_path.mkdir(parents=True)
+    val_results_path = workspace_path.joinpath('ss_predict')
+    if not val_results_path.exists():
+        val_results_path.mkdir(parents=True)
+    log_file_path = workspace_path.joinpath("train-%s" % (shape))
+    setup_logger(log_file_path.as_posix())
+
+    net = build_net(320, num_classes, use_refine=True)
+    logging.info(net)
+    if not resume:
+        # base_weights = torch.load(args.basenet)
+        # logging.info('Loading base network...')
+        # net.base.load_state_dict(base_weights)
+
+        def xavier(param):
+            init.xavier_uniform(param)
+
+        def weights_init(m):
+            for key in m.state_dict():
+                if key.split('.')[-1] == 'weight':
+                    if 'conv' in key:
+                        init.kaiming_normal(m.state_dict()[key], mode='fan_out')
+                    if 'bn' in key:
+                        m.state_dict()[key][...] = 1
+                elif key.split('.')[-1] == 'bias':
+                    m.state_dict()[key][...] = 0
+
+        logging.info('Initializing weights...')
+        # initialize newly added layers' weights with kaiming_normal method
+        net.base.apply(weights_init)
+        net.extras.apply(weights_init)
+        net.trans_layers.apply(weights_init)
+        net.latent_layrs.apply(weights_init)
+        net.up_layers.apply(weights_init)
+        net.arm_loc.apply(weights_init)
+        net.arm_conf.apply(weights_init)
+        net.odm_loc.apply(weights_init)
+        net.odm_conf.apply(weights_init)
     else:
-        lr = args.lr * (gamma ** (step_index))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-    return lr
-
-save_folder = os.path.join(args.save_folder, args.version+'_'+args.size, args.date)
-if not os.path.exists(save_folder):
-    os.makedirs(save_folder)
-test_save_dir = os.path.join(save_folder,'ss_predict')
-if not os.path.exists(test_save_dir):
-    os.makedirs(test_save_dir)
-log_file_path = save_folder + '/train' + time.strftime('_%Y-%m-%d-%H-%M', time.localtime(time.time())) + '.log'
-
-enable_cuda = args.cuda and torch.cuda.is_available()
-if enable_cuda:
-    torch.set_default_tensor_type('torch.cuda.FloatTensor')
-    cudnn.benchmark = True
-
-img_dim = 320
-cfg = config.coco.dimension_320
-rgb_std = (1,1,1)
-rgb_means = (104, 117, 123)
-p = 0.2
-num_classes = 81
-batch_size = args.batch_size
-weight_decay = 0.0005
-gamma = 0.1
-momentum = 0.9
-if args.visdom:
-    import visdom
-    viz = visdom.Visdom()
-
-net = build_net(320, num_classes, use_refine=True)
-print(net)
-if not args.resume_net:
-    # base_weights = torch.load(args.basenet)
-    # print('Loading base network...')
-    # net.base.load_state_dict(base_weights)
-
-    def xavier(param):
-        init.xavier_uniform(param)
-
-    def weights_init(m):
-        for key in m.state_dict():
-            if key.split('.')[-1] == 'weight':
-                if 'conv' in key:
-                    init.kaiming_normal(m.state_dict()[key], mode='fan_out')
-                if 'bn' in key:
-                    m.state_dict()[key][...] = 1
-            elif key.split('.')[-1] == 'bias':
-                m.state_dict()[key][...] = 0
-
-    print('Initializing weights...')
-    # initialize newly added layers' weights with kaiming_normal method
-    net.base.apply(weights_init)
-    net.extras.apply(weights_init)
-    net.trans_layers.apply(weights_init)
-    net.latent_layrs.apply(weights_init)
-    net.up_layers.apply(weights_init)
-    net.arm_loc.apply(weights_init)
-    net.arm_conf.apply(weights_init)
-    net.odm_loc.apply(weights_init)
-    net.odm_conf.apply(weights_init)
-else:
-# load resume network
-    resume_net_path = os.path.join(save_folder,args.version+'_'+args.dataset + '_epoches_'+ \
-                           str(args.resume_epoch) + '.pth')
-    print('Loading resume network',resume_net_path)
-    state_dict = torch.load(resume_net_path)
-    # create new OrderedDict that does not contain `module.`
-    from collections import OrderedDict
-    new_state_dict = OrderedDict()
-    for k, v in state_dict.items():
-        head = k[:7]
-        if head == 'module.':
-            name = k[7:] # remove `module.`
-        else:
-            name = k
-        new_state_dict[name] = v
-    net.load_state_dict(new_state_dict)
-
-if enable_cuda and len(args.gpu_ids) > 0:
-    net = torch.nn.DataParallel(net, device_ids=[int(i) for i in args.gpu_ids])
-
-optimizer = optim.SGD(net.parameters(), lr=args.lr,
-                      momentum=args.momentum, weight_decay=args.weight_decay)
-#optimizer = optim.RMSprop(net.parameters(), lr=args.lr,alpha = 0.9, eps=1e-08,
-#                     momentum=args.momentum, weight_decay=args.weight_decay)
-
-arm_criterion = RefineMultiBoxLoss(2, 0.5, True, 0, True, 3, 0.5, False)
-odm_criterion = RefineMultiBoxLoss(num_classes, 0.5, True, 0, True, 3, 0.5, False,0.01)
-priorbox = PriorBox(cfg)
-detector = Detect(num_classes, 0, cfg, object_score=0.01)
-priors = Variable(priorbox.forward(), volatile=True)
-testset = COCODet(
-    config.coco.root_path, config.coco.val_sets, None)
-train_dataset = COCODet(config.coco.root_path, config.coco.train_sets, preproc(img_dim, rgb_means, rgb_std, p))
-
-net.train()
-# loss counters
-loc_loss = 0  # epoch
-conf_loss = 0
-epoch = 0
-if args.resume_net:
-    epoch = 0 + args.resume_epoch
-epoch_size = len(train_dataset) // args.batch_size
-max_iter = args.max_epoch * epoch_size
-
-stepvalues_VOC = (150 * epoch_size, 200 * epoch_size, 250 * epoch_size)
-stepvalues_COCO = (90 * epoch_size, 120 * epoch_size, 140 * epoch_size)
-stepvalues = (stepvalues_VOC, stepvalues_COCO)[args.dataset=='COCO']
-print('Training', args.version, 'on', train_dataset.name)
-step_index = 0
-
-if args.visdom:
-    # initialize visdom loss plot
-    lot = viz.line(
-        X=torch.zeros((1,)).cpu(),
-        Y=torch.zeros((1, 3)).cpu(),
-        opts=dict(
-            xlabel='Iteration',
-            ylabel='Loss',
-            title='Current SSD Training Loss',
-            legend=['Loc Loss', 'Conf Loss', 'Loss']
-        )
-    )
-    epoch_lot = viz.line(
-        X=torch.zeros((1,)).cpu(),
-        Y=torch.zeros((1, 3)).cpu(),
-        opts=dict(
-            xlabel='Epoch',
-            ylabel='Loss',
-            title='Epoch SSD Training Loss',
-            legend=['Loc Loss', 'Conf Loss', 'Loss']
-        )
-    )
-if args.resume_epoch > 0:
-    start_iter = args.resume_epoch * epoch_size
-else:
-    start_iter = 0
-
-log_file = open(log_file_path,'w')
-batch_iterator = None
-mean_odm_loss_c = 0
-mean_odm_loss_l = 0
-mean_arm_loss_c = 0
-mean_arm_loss_l = 0
-for iteration in range(start_iter, max_iter+10):
-    if (iteration % epoch_size == 0):
-        # create batch iterator
-        batch_iterator = iter(data.DataLoader(train_dataset, batch_size,
-                                              shuffle=True, num_workers=args.num_workers, collate_fn=detection_collate))
-        loc_loss = 0
-        conf_loss = 0
-        if epoch % args.save_frequency == 0 and epoch > 0:
-            torch.save(net.state_dict(), os.path.join(save_folder,args.version+'_'+args.dataset + '_epoches_'+
-                       repr(epoch) + '.pth'))
-        if epoch%args.test_frequency == 0 and epoch>0:
-            net.eval()
-            top_k = (300, 200)[args.dataset == 'COCO']
-            if args.dataset == 'VOC':
-                APs,mAP = test_net(test_save_dir, net, detector, args.cuda, testset,
-                         BaseTransform(net.module.size, rgb_means,rgb_std, (2, 0, 1)),
-                         top_k, thresh=0.01)
-                APs = [str(num) for num in APs]
-                mAP = str(mAP)
-                log_file.write(str(iteration)+' APs:\n'+'\n'.join(APs))
-                log_file.write('mAP:\n'+mAP+'\n')
+        # load resume network
+        # resume_path = os.path.join(save_folder,version+'_'+dataset + '_epoches_'+ str(resume_epoch) + '.pth')
+        logging.info('Loading resume network',resume_path)
+        state_dict = torch.load(resume_path)
+        # create new OrderedDict that does not contain `module.`
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in state_dict.items():
+            head = k[:7]
+            if head == 'module.':
+                name = k[7:] # remove `module.`
             else:
-                test_net(test_save_dir, net, detector, args.cuda, testset,
-                                   BaseTransform(net.module.size, rgb_means,rgb_std, (2, 0, 1)),
-                                   top_k, thresh=0.01)
+                name = k
+            new_state_dict[name] = v
+        net.load_state_dict(new_state_dict)
+    if enable_cuda and len(gpu_ids) > 0:
+        net = torch.nn.DataParallel(net, device_ids=gpu_ids)
 
-            net.train()
-        epoch += 1
+    optimizer = optim.SGD(net.parameters(), lr=base_lr,
+                          momentum=momentum, weight_decay=weight_decay)
+    scheduler = MultiStepLR(optimizer, milestones=[30,80], gamma=0.5)
+    # optimizer = optim.RMSprop(net.parameters(), lr=base_lr,alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
+    arm_criterion = RefineMultiBoxLoss(2, 0.5, True, 0, True, 3, 0.5, False)
+    odm_criterion = RefineMultiBoxLoss(num_classes, 0.5, True, 0, True, 3, 0.5, False, 0.01)
 
-    load_t0 = time.time()
-    if iteration in stepvalues:
-        step_index  = stepvalues.index(iteration)+1
-        if args.visdom:
-            viz.line(
-                X=torch.ones((1, 3)).cpu() * epoch,
-                Y=torch.Tensor([loc_loss, conf_loss,
-                                loc_loss + conf_loss]).unsqueeze(0).cpu() / epoch_size,
-                win=epoch_lot,
-                update='append'
-            )
-    lr = adjust_learning_rate(optimizer, args.gamma, epoch, step_index, iteration, epoch_size)
+    logging.info('Loading datasets...')
+    train_dataset_loader = data.DataLoader(train_dataset, batch_size,
+                                           shuffle=True,
+                                           num_workers=num_workers,
+                                           collate_fn=detection_collate)
 
+    for epoch in range(max_epoch):
+        logging.info("starts to train %d" % (epoch))
+        scheduler.step()
 
-    # load train data
-    images, targets = next(batch_iterator)
+        for iteration, (images, targets) in enumerate(train_dataset_loader):
+            load_t0 = time.time()
+            if enable_cuda:
+                images = Variable(images.cuda())
+                targets = [Variable(anno.cuda(),volatile=True) for anno in targets]
+            else:
+                images = Variable(images)
+                targets = [Variable(anno, volatile=True) for anno in targets]
 
-    #print(np.sum([torch.sum(anno[:,-1] == 2) for anno in targets]))
+            import pdb
+            pdb.set_trace()
+            # forward
+            arm_loc, arm_conf, odm_loc, odm_conf = net(images)
+            # backward
+            optimizer.zero_grad()
+            # arm branch loss
+            arm_loss_l, arm_loss_c = arm_criterion((arm_loc, arm_conf), priors, targets)
+            # odm branch loss
+            odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets, (arm_loc,arm_conf),False)
+            loss = arm_loss_l + arm_loss_c + odm_loss_l + odm_loss_c
+            loss.backward()
+            optimizer.step()
 
-    if args.cuda:
-        images = Variable(images.cuda())
-        targets = [Variable(anno.cuda(),volatile=True) for anno in targets]
+            load_t1 = time.time()
+            if iteration % 10 == 0:
+                logging.info("[%d/%d] || arm_loc_loss: %.4f arm_class_loss: %.4f obm_loc_loss: %.4f obm_class_loss: %.4f || Batch time: %.4f sec. || LR: %6.f\n" % ( epoch, iteration, mean_arm_loss_l.data[0],mean_arm_loss_c.data[0],mean_odm_loss_l.data[0],mean_odm_loss_c.data[0], load_t1 - load_t0, optimizer.param_groups[0]['lr']))
+
+    torch.save(net, workspace_path.joinpath("Final_%d.pt" %(epoch)))
+
+if __name__ == '__main__':
+
+    args = parser.parse_args()
+    workspace = args.workspace
+    batch_size = args.batch_size
+    shape = args.shape
+    dataset = args.dataset
+    base_lr = args.lr
+    warm_epoch = args.warm_epoch
+    max_epoch = args.max_epoch
+    resume = args.resume
+    resume_epoch = args.resume_epoch
+    momentum = args.momentum
+    weight_decay = args.weight_decay
+    gamma = args.gamma
+    num_workers = args.num_workers
+    save_frequency = args.save_frequency
+    enable_visdom = args.visdom
+    gpu_ids = [int(i) for i in args.gpu_ids]
+    enable_cuda = args.cuda and torch.cuda.is_available()
+
+    if dataset == "COCO":
+        basic_conf = config.coco
+    elif dataset == "VOC":
+        basic_conf = config.voc
     else:
-        images = Variable(images)
-        targets = [Variable(anno, volatile=True) for anno in targets]
-    # forward
-    out = net(images)
-    arm_loc, arm_conf, odm_loc, odm_conf = out
-    # backprop
-    optimizer.zero_grad()
-    #arm branch loss
-    arm_loss_l,arm_loss_c = arm_criterion((arm_loc,arm_conf),priors,targets)
-    #odm branch loss
-    odm_loss_l, odm_loss_c = odm_criterion((odm_loc,odm_conf),priors,targets,(arm_loc,arm_conf),False)
+        raise RuntimeError("not support dataset %s" % (dataset))
 
-    mean_arm_loss_c += arm_loss_c.data[0]
-    mean_arm_loss_l += arm_loss_l.data[0]
-    mean_odm_loss_c += odm_loss_c.data[0]
-    mean_odm_loss_l += odm_loss_l.data[0]
+    root_path, train_sets, val_sets = basic_conf.root_path,  basic_conf.train_sets, basic_conf.val_sets
+    num_classes, img_dim, rgb_means, rgb_std, augment_ratio = basic_conf.num_classes, basic_conf.img_dim, basic_conf.rgb_means, basic_conf.rgb_std, basic_conf.augment_ratio
+    module_cfg = getattr(basic_conf, "dimension_%d"%(int(shape)))
 
-    loss = arm_loss_l+arm_loss_c+odm_loss_l+odm_loss_c
-    loss.backward()
-    optimizer.step()
-    load_t1 = time.time()
-    if iteration % 10 == 0:
-        print('Epoch:' + repr(epoch) + ' || epochiter: ' + repr(iteration % epoch_size) + '/' + repr(epoch_size)
-              + '|| Total iter ' +
-              repr(iteration) + ' || AL: %.4f AC: %.4f OL: %.4f OC: %.4f||' % (
-            mean_arm_loss_l/10,mean_arm_loss_c/10,mean_odm_loss_l/10,mean_odm_loss_c/10) +
-            'Batch time: %.4f sec. ||' % (load_t1 - load_t0) + 'LR: %.8f' % (lr))
-        log_file.write('Epoch:' + repr(epoch) + ' || epochiter: ' + repr(iteration % epoch_size) + '/' + repr(epoch_size)
-              + '|| Total iter ' +
-               repr(iteration) + ' || AL: %.4f AC: %.4f OL: %.4f OC: %.4f||' % (
-               mean_arm_loss_l/10,mean_arm_loss_c/10,mean_odm_loss_l/10,mean_odm_loss_c/10) +
-              'Batch time: %.4f sec. ||' % (load_t1 - load_t0) + 'LR: %.8f' % (lr)+'\n')
+    if dataset == "VOC":
+        train_dataset = VOCDetection(root_path, train_sets, preproc(img_dim, rgb_means, rgb_std, augment_ratio), AnnotationTransform())
+        val_dataset = VOCDetection(root_path, val_sets, None, AnnotationTransform())
+    elif dataset == "COCO":
+        train_dataset = COCODet(root_path, train_sets, preproc(img_dim, rgb_means, rgb_std, augment_ratio))
+        val_dataset = COCODet(root_path, val_sets, None)
 
-        mean_odm_loss_c = 0
-        mean_odm_loss_l = 0
-        mean_arm_loss_c = 0
-        mean_arm_loss_l = 0
-        if args.visdom and args.send_images_to_visdom:
-            random_batch_index = np.random.randint(images.size(0))
-            viz.image(images.data[random_batch_index].cpu().numpy())
-log_file.close()
-torch.save(net.state_dict(), os.path.join(save_folder ,
-           'Final_' + args.version +'_' + args.dataset+ '.pth'))
+    priorbox = PriorBox(module_cfg)
+    detector = Detect(num_classes, 0, module_cfg, object_score=0.01)
+    priors = Variable(priorbox.forward(), volatile=True)
 
+    train(workspace, train_dataset, val_dataset, priors, batch_size, shape, base_lr, momentum, weight_decay, gamma, gpu_ids, enable_cuda, warm_epoch, max_epoch, resume, resume_epoch, num_workers, save_frequency, enable_visdom)

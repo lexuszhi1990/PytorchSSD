@@ -15,8 +15,8 @@ import torch.optim as optim
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
 import torch.nn.init as init
-from torch.autograd import Variable
 import torch.utils.data as data
+from torch.autograd import Variable
 
 from src.config import config
 from src.data.data_augment import detection_collate, BaseTransform, preproc
