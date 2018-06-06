@@ -34,49 +34,41 @@ from src.utils.timer import Timer
 
 parser = argparse.ArgumentParser(
     description='Refined SSD')
+parser.add_argument('--workspace', default='./workspace')
 parser.add_argument('--shape', default='320', help='320 or 512 input size.')
 parser.add_argument('--dataset', default='COCO', help='VOC or COCO dataset')
 parser.add_argument('--batch_size', default=32, type=int, help='Batch size for training')
+parser.add_argument('--cuda', action="store_true", default=False, help='Use cuda to train model')
+parser.add_argument('--gpu_ids', nargs='+', default=[], help='gpu id')
+parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float, help='initial learning rate')
+parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
+parser.add_argument('--gamma', default=0.1, type=float, help='Gamma update for SGD')
+parser.add_argument('--weight_decay', default=5e-4, type=float, help='Weight decay for SGD')
+parser.add_argument('--resume', default=False, help='resume net for retraining')
+parser.add_argument('--resume_epoch', default=0, type=int, help='resume iter for retraining')
+parser.add_argument('--max_epoch', default=300, type=int, help='max epoch for retraining')
+parser.add_argument('--save_frequency', default=10, type=int, help='epoch for saving ckpt')
 parser.add_argument('--jaccard_threshold', default=0.5, type=float, help='Min Jaccard index for matching')
 parser.add_argument('--num_workers', default=8, type=int, help='Number of workers used in dataloading')
+parser.add_argument('--visdom', default=False, type=str2bool, help='Use visdom to for loss visualization')
 
-parser.add_argument('--cuda', default=False,
-                    type=bool, help='Use cuda to train model')
-parser.add_argument('--gpu_ids', nargs='+', default=[], help='gpu id')
-parser.add_argument('--lr', '--learning-rate',
-                    default=1e-3, type=float, help='initial learning rate')
-parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
-parser.add_argument('--resume', default=False, help='resume net for retraining')
-parser.add_argument('--resume_epoch', default=0,
-                    type=int, help='resume iter for retraining')
-
-parser.add_argument('--max_epoch', default=300,
-                    type=int, help='max epoch for retraining')
 parser.add_argument('--warm_epoch', default=1,
                     type=int, help='max epoch for retraining')
-parser.add_argument('--weight_decay', default=5e-4,
-                    type=float, help='Weight decay for SGD')
-parser.add_argument('--gamma', default=0.1,
-                    type=float, help='Gamma update for SGD')
-parser.add_argument('--log_iters', default=True,
-                    type=bool, help='Print the loss at each iteration')
-parser.add_argument('--workspace', default='./workspace')
 parser.add_argument('--date', default='0327')
-parser.add_argument('--save_frequency',default=10)
 parser.add_argument('--retest', default=False, type=bool,
                     help='test cache results')
 parser.add_argument('--test_frequency',default=10)
-parser.add_argument('--visdom', default=False, type=str2bool, help='Use visdom to for loss visualization')
 parser.add_argument('--send_images_to_visdom', type=str2bool, default=False, help='Sample a random image from each 10th batch, send it to visdom after augmentations step')
 parser.add_argument('--basenet', default='/mnt/lvmhdd1/zuoxin/ssd_pytorch_models/vgg16_reducedfc.pth', help='pretrained base model')
 
-def train(workspace, train_dataset, val_dataset, priors, batch_size, shape, base_lr, momentum, weight_decay, gamma, gpu_ids, enable_cuda, warm_epoch, max_epoch, resume, resume_epoch, num_workers, save_frequency, enable_visdom):
+def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, base_lr, momentum, weight_decay, gamma, gpu_ids, enable_cuda, max_epoch, resume, resume_epoch, num_workers, save_frequency, enable_visdom):
 
     if enable_visdom:
         viz = visdom.Visdom()
-    if enable_cuda:
-        torch.set_default_tensor_type('torch.cuda.FloatTensor')
-        cudnn.benchmark = True
+
+    priorbox = PriorBox(module_cfg)
+    detector = Detect(num_classes, 0, module_cfg, object_score=0.01)
+    priors = Variable(priorbox.forward(), volatile=True)
 
     workspace_path = Path(workspace)
     if not workspace_path.exists():
@@ -137,12 +129,13 @@ def train(workspace, train_dataset, val_dataset, priors, batch_size, shape, base
     if enable_cuda and len(gpu_ids) > 0:
         net = torch.nn.DataParallel(net, device_ids=gpu_ids)
 
+    timer = Timer()
     optimizer = optim.SGD(net.parameters(), lr=base_lr,
                           momentum=momentum, weight_decay=weight_decay)
     scheduler = MultiStepLR(optimizer, milestones=[30,80], gamma=0.5)
     # optimizer = optim.RMSprop(net.parameters(), lr=base_lr,alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
-    arm_criterion = RefineMultiBoxLoss(2, 0.5, True, 0, True, 3, 0.5, False)
-    odm_criterion = RefineMultiBoxLoss(num_classes, 0.5, True, 0, True, 3, 0.5, False, 0.01)
+    arm_criterion = RefineMultiBoxLoss(2, 0.5, True, 0, True, 3, 0.5, False, enable_cuda=enable_cuda)
+    odm_criterion = RefineMultiBoxLoss(num_classes, 0.5, True, 0, True, 3, 0.5, False, 0.01, enable_cuda=enable_cuda)
 
     logging.info('Loading datasets...')
     train_dataset_loader = data.DataLoader(train_dataset, batch_size,
@@ -150,38 +143,36 @@ def train(workspace, train_dataset, val_dataset, priors, batch_size, shape, base
                                            num_workers=num_workers,
                                            collate_fn=detection_collate)
 
-    for epoch in range(max_epoch):
-        logging.info("starts to train %d" % (epoch))
+    for epoch in range(1, max_epoch):
         scheduler.step()
-
         for iteration, (images, targets) in enumerate(train_dataset_loader):
-            load_t0 = time.time()
             if enable_cuda:
                 images = Variable(images.cuda())
-                targets = [Variable(anno.cuda(),volatile=True) for anno in targets]
+                targets = [Variable(anno.cuda(), volatile=True) for anno in targets]
             else:
                 images = Variable(images)
                 targets = [Variable(anno, volatile=True) for anno in targets]
 
-            import pdb
-            pdb.set_trace()
-            # forward
+            timer.tic()
             arm_loc, arm_conf, odm_loc, odm_conf = net(images)
-            # backward
-            optimizer.zero_grad()
-            # arm branch loss
             arm_loss_l, arm_loss_c = arm_criterion((arm_loc, arm_conf), priors, targets)
-            # odm branch loss
-            odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets, (arm_loc,arm_conf),False)
+            odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets, (arm_loc,arm_conf), False)
             loss = arm_loss_l + arm_loss_c + odm_loss_l + odm_loss_c
+            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            timer.toc()
 
-            load_t1 = time.time()
             if iteration % 10 == 0:
-                logging.info("[%d/%d] || arm_loc_loss: %.4f arm_class_loss: %.4f obm_loc_loss: %.4f obm_class_loss: %.4f || Batch time: %.4f sec. || LR: %6.f\n" % ( epoch, iteration, mean_arm_loss_l.data[0],mean_arm_loss_c.data[0],mean_odm_loss_l.data[0],mean_odm_loss_c.data[0], load_t1 - load_t0, optimizer.param_groups[0]['lr']))
+                logging.info("[%d/%d] || total_loss: %.4f(arm_loc_loss: %.4f arm_class_loss: %.4f obm_loc_loss: %.4f obm_class_loss: %.4f) || Batch time: %.4f sec. || LR: %.6f" % (epoch, iteration, loss, arm_loss_l, arm_loss_c, odm_loss_l, odm_loss_c, timer.average_time, optimizer.param_groups[0]['lr']))
+                timer.clear()
 
-    torch.save(net, workspace_path.joinpath("Final_%d.pt" %(epoch)))
+        if save_frequency % epoch == 0:
+            save_ckpt_path = workspace_path.joinpath("refineDet-model-%d.pt" %(epoch))
+            torch.save(net, save_ckpt_path)
+            logging.info("save model to %s " % save_ckpt_path)
+
+    torch.save(net, workspace_path.joinpath("Final-refineDet-%d.pt" %(epoch)))
 
 if __name__ == '__main__':
 
@@ -202,7 +193,10 @@ if __name__ == '__main__':
     save_frequency = args.save_frequency
     enable_visdom = args.visdom
     gpu_ids = [int(i) for i in args.gpu_ids]
-    enable_cuda = args.cuda and torch.cuda.is_available()
+    enable_cuda = args.cuda and torch.cuda.is_available() and len(gpu_ids) > 0
+    if enable_cuda:
+        torch.set_default_tensor_type('torch.cuda.FloatTensor')
+        cudnn.benchmark = True
 
     if dataset == "COCO":
         basic_conf = config.coco
@@ -222,8 +216,4 @@ if __name__ == '__main__':
         train_dataset = COCODet(root_path, train_sets, preproc(img_dim, rgb_means, rgb_std, augment_ratio))
         val_dataset = COCODet(root_path, val_sets, None)
 
-    priorbox = PriorBox(module_cfg)
-    detector = Detect(num_classes, 0, module_cfg, object_score=0.01)
-    priors = Variable(priorbox.forward(), volatile=True)
-
-    train(workspace, train_dataset, val_dataset, priors, batch_size, shape, base_lr, momentum, weight_decay, gamma, gpu_ids, enable_cuda, warm_epoch, max_epoch, resume, resume_epoch, num_workers, save_frequency, enable_visdom)
+    train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, base_lr, momentum, weight_decay, gamma, gpu_ids, enable_cuda, max_epoch, resume, resume_epoch, num_workers, save_frequency, enable_visdom)

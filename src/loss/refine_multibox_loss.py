@@ -28,8 +28,9 @@ class RefineMultiBoxLoss(nn.Module):
     """
 
 
-    def __init__(self, num_classes,overlap_thresh,prior_for_matching,bkg_label,neg_mining,neg_pos,neg_overlap,encode_target,object_score = 0):
+    def __init__(self, num_classes,overlap_thresh,prior_for_matching,bkg_label,neg_mining,neg_pos,neg_overlap,encode_target,object_score=0, variance=[0.1,0.2], enable_cuda=False):
         super(RefineMultiBoxLoss, self).__init__()
+
         self.num_classes = num_classes
         self.threshold = overlap_thresh
         self.background_label = bkg_label
@@ -39,9 +40,10 @@ class RefineMultiBoxLoss(nn.Module):
         self.negpos_ratio = neg_pos
         self.neg_overlap = neg_overlap
         self.object_score = object_score
-        self.variance = [0.1,0.2]
+        self.enable_cuda = enable_cuda
+        self.variance = variance
 
-    def forward(self, odm_data,priors, targets,arm_data = None,filter_object = False):
+    def forward(self, odm_data, priors, targets, arm_data=None, filter_object=False):
         """Multibox Loss
         Args:
             predictions (tuple): A tuple containing loc preds, conf preds,
@@ -76,7 +78,7 @@ class RefineMultiBoxLoss(nn.Module):
                 refine_match(self.threshold,truths,priors,self.variance,labels,loc_t,conf_t,idx,arm_loc[idx].data)
             else:
                 match(self.threshold,truths,priors,self.variance,labels,loc_t,conf_t,idx)
-        if GPU:
+        if self.enable_cuda:
             loc_t = loc_t.cuda()
             conf_t = conf_t.cuda()
         # wrap targets

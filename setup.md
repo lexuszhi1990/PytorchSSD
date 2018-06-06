@@ -21,7 +21,10 @@ CUDA_VISIBLE_DEVICES=1 python refinedet_train_test.py -d COCO -v Refine_vgg -s 3
 
 CUDA_VISIBLE_DEVICES=1,2 python refinedet_train_test.py -d COCO -v Refine_vgg -s 320 --visdom True --send_images_to_visdom False --basenet weights/pretrained/vgg16_reducedfc.pth --save_folder /mnt/ckpt/pytorchSSD --date refinedet_vgg_0516 --gpu_ids 0,1 --batch_size 56
 
-#### 2018.5.30
+#### 2018.6.6
+
+refactor the code
+CUDA_VISIBLE_DEVICES=1,2 python refinedet_train_test.py --dataset COCO --gpu_ids 0,1 --cuda
 
 ### troubleshoot
 
