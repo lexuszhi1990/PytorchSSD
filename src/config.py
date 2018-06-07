@@ -79,8 +79,8 @@ config.voc.dimension_512 = {
 ####################################################
 
 config.coco.root_path = '/mnt/dataset/coco'
-config.coco.train_sets = [('2017', 'train')]
-config.coco.val_sets = [('2017', 'val')]
+config.coco.train_sets = 'person_train2017'
+config.coco.val_sets = 'person_val2017'
 config.coco.base_stepvalues = [90, 12, 140]
 config.coco.img_dim = 320
 config.coco.rgb_std = (1,1,1)

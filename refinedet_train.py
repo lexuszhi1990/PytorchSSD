@@ -132,8 +132,8 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
     timer = Timer()
     optimizer = optim.SGD(net.parameters(), lr=base_lr,
                           momentum=momentum, weight_decay=weight_decay)
-    scheduler = MultiStepLR(optimizer, milestones=[30,80], gamma=0.5)
     # optimizer = optim.RMSprop(net.parameters(), lr=base_lr,alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
+    scheduler = MultiStepLR(optimizer, milestones=[30, 80, 100, 180], gamma=0.85)
     arm_criterion = RefineMultiBoxLoss(2, 0.5, True, 0, True, 3, 0.5, False, enable_cuda=enable_cuda)
     odm_criterion = RefineMultiBoxLoss(num_classes, 0.5, True, 0, True, 3, 0.5, False, 0.01, enable_cuda=enable_cuda)
 
@@ -157,7 +157,14 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
             arm_loc, arm_conf, odm_loc, odm_conf = net(images)
             arm_loss_l, arm_loss_c = arm_criterion((arm_loc, arm_conf), priors, targets)
             odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets, (arm_loc,arm_conf), False)
-            loss = arm_loss_l + arm_loss_c + odm_loss_l + odm_loss_c
+
+            if epoch <= 50:
+                loss = 0.9*arm_loss_l + 0.9*arm_loss_c + 0.1*odm_loss_l + 0.1*odm_loss_c
+            elif epoch > 50 and epoch < 100:
+                loss = 0.5*arm_loss_l + 0.5*arm_loss_c + 0.5*odm_loss_l + 0.5*odm_loss_c
+            else:
+                loss = 0.2*arm_loss_l + 0.2*arm_loss_c + 0.8*odm_loss_l + 0.8*odm_loss_c
+
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()

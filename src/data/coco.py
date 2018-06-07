@@ -12,7 +12,7 @@ import pickle
 import cv2
 import numpy as np
 import os
-import os.path
+from pathlib import Path
 import torch
 import torch.utils.data as data
 import torchvision.transforms as transforms
@@ -38,100 +38,76 @@ class COCODet(data.Dataset):
             (default: 'VOC2007')
     """
 
-    def __init__(self, root, image_sets, preproc=None, target_transform=None,
+    def __init__(self, root, image_set, preproc=None, target_transform=None,
                  dataset_name='COCO'):
         self.root = root
-        self.cache_path = os.path.join(self.root, 'cache')
-        self.image_set = image_sets
+        self.cache_path = Path(self.root, 'cache')
+        self.image_set = image_set
         self.preproc = preproc
         self.target_transform = target_transform
         self.name = dataset_name
         self.ids = list()
         self.annotations = list()
-        self._view_map = {
-            'minival2014': 'val2014',  # 5k val2014 subset
-            'valminusminival2014': 'val2014',  # val2014 \setminus minival2014
-            'test-dev2015': 'test2015',
-        }
 
-        for (year, image_set) in image_sets:
-            coco_name = image_set + year
-            data_name = (self._view_map[coco_name]
-            if coco_name in self._view_map
-            else coco_name)
-            annofile = self._get_ann_file(coco_name)
-            _COCO = COCO(annofile)
-            self._COCO = _COCO
-            self.coco_name = coco_name
-            cats = _COCO.loadCats(_COCO.getCatIds())
-            self._classes = tuple(['__background__'] + [c['name'] for c in cats])
-            self.num_classes = len(self._classes)
-            self._class_to_ind = dict(zip(self._classes, range(self.num_classes)))
-            self._class_to_coco_cat_id = dict(zip([c['name'] for c in cats],
-                                                  _COCO.getCatIds()))
-            indexes = _COCO.getImgIds()
-            self.image_indexes = indexes
-            self.ids.extend([self.image_path_from_index(data_name, index) for index in indexes])
-            if image_set.find('test') != -1:
-                print('test set will not load annotations!')
-            else:
-                self.annotations.extend(self._load_coco_annotations(coco_name, indexes, _COCO))
+        self.coco_anno_path = Path(self.root, 'annotations', "instances_%s.json" % (image_set))
+        assert self.coco_anno_path.exists(), "coco annotation path not exists: %s" % self.coco_anno_path
 
-    def image_path_from_index(self, name, index):
+        self._COCO = COCO(self.coco_anno_path.as_posix())
+        self.cats = self._COCO.loadCats(self._COCO.getCatIds())
+        self._classes = tuple(['__background__'] + [c['name'] for c in self.cats])
+        self.num_classes = len(self._classes)
+        self._class_to_ind = dict(zip(self._classes, range(self.num_classes)))
+        self._class_to_coco_cat_id = dict(zip([c['name'] for c in self.cats], self._COCO.getCatIds()))
+        self.image_indexes = self._COCO.getImgIds()
+        self.ids = [self.image_path_from_index(index) for index in self.image_indexes]
+
+        if image_set.find('test') != -1:
+            print('test set will not load annotations!')
+        else:
+            self.annotations = self._load_coco_annotations()
+
+        if not self.cache_path.exists():
+            self.cache_path.mkdir()
+            print('create cache path %s ' % self.cache_path)
+
+    def image_path_from_index(self, index):
         """
         Construct an image path from the image's "index" identifier.
         """
         # Example image path for index=119993:
-        #   images/train2014/COCO_train2014_000000119993.jpg
-        if '2014' in name or '2015' in name:
-            file_name = ('COCO_' + name + '_' +
-                         str(index).zfill(12) + '.jpg')
-            image_path = os.path.join(self.root, 'images',
-                                      name, file_name)
-            assert os.path.exists(image_path), \
-                'Path does not exist: {}'.format(image_path)
-        if '2017' in name:
-            file_name = str(index).zfill(12) + '.jpg'
-            image_path = os.path.join(self.root, 'images', name, file_name)
-            assert os.path.exists(image_path), \
-                'Path does not exist: {}'.format(image_path)
-        return image_path
+        #   coco/images/train2017/000000119993.jpg
+        image_path = Path(self.root, 'images', self.image_set.split('_')[-1], str(index).zfill(12) + '.jpg')
+        assert image_path.exists(), "%s not exists" % image_path
+        return image_path.as_posix()
 
-    def _get_ann_file(self, name):
-        prefix = 'instances' if name.find('test') == -1 \
-            else 'image_info'
-        return os.path.join(self.root, 'annotations',
-                            prefix + '_' + name + '.json')
-
-    def _load_coco_annotations(self, coco_name, indexes, _COCO):
-        cache_file = os.path.join(self.cache_path, coco_name + '_gt_roidb.pkl')
-        if not os.path.exists(self.cache_path):
-            os.makedirs(self.cache_path)
-        if os.path.exists(cache_file):
-            with open(cache_file, 'rb') as fid:
+    def _load_coco_annotations(self):
+        cache_file = self.cache_path.joinpath(self.image_set + '_gt_roidb.pkl')
+        if cache_file.exists():
+            with cache_file.open('rb') as fid:
                 roidb = pickle.load(fid)
-            print('{} gt roidb loaded from {}'.format(coco_name, cache_file))
+            print('{} gt roidb loaded from {}'.format(self.image_set, cache_file))
             return roidb
 
-        gt_roidb = [self._annotation_from_index(index, _COCO)
-                    for index in indexes]
+        gt_roidb = [self._annotation_from_index(index)
+                    for index in self.image_indexes]
         with open(cache_file, 'wb') as fid:
             pickle.dump(gt_roidb, fid, pickle.HIGHEST_PROTOCOL)
         print('wrote gt roidb to {}'.format(cache_file))
+
         return gt_roidb
 
-    def _annotation_from_index(self, index, _COCO):
+    def _annotation_from_index(self, index):
         """
         Loads COCO bounding-box instance annotations. Crowd instances are
         handled by marking their overlaps (with all categories) to -1. This
         overlap value means that crowd "instances" are excluded from training.
         """
-        im_ann = _COCO.loadImgs(index)[0]
+        im_ann = self._COCO.loadImgs(index)[0]
         width = im_ann['width']
         height = im_ann['height']
 
-        annIds = _COCO.getAnnIds(imgIds=index, iscrowd=None)
-        objs = _COCO.loadAnns(annIds)
+        annIds = self._COCO.getAnnIds(imgIds=index, iscrowd=None)
+        objs = self._COCO.loadAnns(annIds)
         # Sanitize bboxes -- some are invalid
         valid_objs = []
         for obj in objs:
@@ -249,8 +225,8 @@ class COCODet(data.Dataset):
         coco_eval.evaluate()
         coco_eval.accumulate()
         self._print_detection_eval_metrics(coco_eval)
-        eval_file = os.path.join(output_dir, 'detection_results.pkl')
-        with open(eval_file, 'wb') as fid:
+        eval_file = Path(output_dir, 'detection_results.pkl')
+        with eval_file.open('wb') as fid:
             pickle.dump(coco_eval, fid, pickle.HIGHEST_PROTOCOL)
         print('Wrote COCO eval results to: {}'.format(eval_file))
 
@@ -281,11 +257,9 @@ class COCODet(data.Dataset):
         for cls_ind, cls in enumerate(self._classes):
             if cls == '__background__':
                 continue
-            print('Collecting {} results ({:d}/{:d})'.format(cls, cls_ind,
-                                                             self.num_classes))
+            print('Collecting {} results ({:d}/{:d})'.format(cls, cls_ind, self.num_classes))
             coco_cat_id = self._class_to_coco_cat_id[cls]
-            results.extend(self._coco_results_one_category(all_boxes[cls_ind],
-                                                           coco_cat_id))
+            results.extend(self._coco_results_one_category(all_boxes[cls_ind], coco_cat_id))
             '''
             if cls_ind ==30:
                 res_f = res_file+ '_1.json'
@@ -294,16 +268,12 @@ class COCODet(data.Dataset):
                     json.dump(results, fid)
                 results = []
             '''
-        # res_f2 = res_file+'_2.json'
         print('Writing results json to {}'.format(res_file))
         with open(res_file, 'w') as fid:
             json.dump(results, fid)
 
     def evaluate_detections(self, all_boxes, output_dir):
-        res_file = os.path.join(output_dir, ('detections_' +
-                                             self.coco_name +
-                                             '_results'))
-        res_file += '.json'
+        res_file = Path(output_dir, "detections_%s_results.json" % (self.coco_name)).as_posix()
         self._write_coco_results_file(all_boxes, res_file)
         # Only do evaluation on non-test sets
         if self.coco_name.find('test') == -1:

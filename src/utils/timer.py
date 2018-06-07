@@ -7,7 +7,6 @@
 
 import time
 
-
 class Timer(object):
     """A simple timer."""
     def __init__(self):
