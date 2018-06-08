@@ -74,8 +74,8 @@ class RefineMultiBoxLoss(nn.Module):
         conf_t = torch.LongTensor(num, num_priors)
         for idx in range(num):
             truths = targets[idx][:,:-1].data
-            labels = targets[idx][:,-1].data
-            #for object detection
+            labels = targets[idx][:,-1].data > self.background_label
+            # for object detection
             if self.num_classes == 2:
                 labels = labels > 0
             if arm_data:

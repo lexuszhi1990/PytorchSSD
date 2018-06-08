@@ -79,14 +79,17 @@ config.voc.dimension_512 = {
 ####################################################
 
 config.coco.root_path = '/mnt/dataset/coco'
-config.coco.train_sets = 'person_train2017'
-config.coco.val_sets = 'person_val2017'
+config.coco.train_sets = 'train2017'
+config.coco.val_sets = 'val2017'
+config.coco.num_classes = 81
+# config.coco.train_sets = 'person_train2017'
+# config.coco.val_sets = 'person_val2017'
+# config.coco.num_classes = 2
 config.coco.base_stepvalues = [90, 12, 140]
 config.coco.img_dim = 320
 config.coco.rgb_std = (1,1,1)
 config.coco.rgb_means = (0, 0, 0)
 config.coco.augment_ratio = 0.2
-config.coco.num_classes = 81
 
 config.coco.dimension_300 = {
     'feature_maps': [38, 19, 10, 5, 3, 1],

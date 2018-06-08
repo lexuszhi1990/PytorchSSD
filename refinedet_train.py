@@ -51,6 +51,7 @@ parser.add_argument('--save_frequency', default=10, type=int, help='epoch for sa
 parser.add_argument('--jaccard_threshold', default=0.5, type=float, help='Min Jaccard index for matching')
 parser.add_argument('--num_workers', default=4, type=int, help='Number of workers used in dataloading')
 parser.add_argument('--visdom', default=False, type=str2bool, help='Use visdom to for loss visualization')
+parser.add_argument('--basenet', default='./weights/pretrained/vgg16_reducedfc.pth', help='pretrained base model')
 
 parser.add_argument('--warm_epoch', default=1,
                     type=int, help='max epoch for retraining')
@@ -59,7 +60,6 @@ parser.add_argument('--retest', default=False, type=bool,
                     help='test cache results')
 parser.add_argument('--test_frequency',default=10)
 parser.add_argument('--send_images_to_visdom', type=str2bool, default=False, help='Sample a random image from each 10th batch, send it to visdom after augmentations step')
-parser.add_argument('--basenet', default='/mnt/lvmhdd1/zuoxin/ssd_pytorch_models/vgg16_reducedfc.pth', help='pretrained base model')
 
 def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, base_lr, momentum, weight_decay, gamma, gpu_ids, enable_cuda, max_epoch, resume, resume_epoch, num_workers, save_frequency, enable_visdom):
 
@@ -173,7 +173,7 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
             arm_loc, arm_conf, odm_loc, odm_conf = net(images)
             timer.toc()
             arm_loss_l, arm_loss_c = arm_criterion((arm_loc, arm_conf), priors, targets)
-            odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets, (arm_loc,arm_conf), False)
+            odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets, (arm_loc, arm_conf), False)
             mean_arm_loss_l += arm_loss_l.data[0]
             mean_arm_loss_c += arm_loss_c.data[0]
             mean_odm_loss_l += odm_loss_l.data[0]

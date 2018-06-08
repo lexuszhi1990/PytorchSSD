@@ -66,6 +66,10 @@ class RefineMultiBoxLoss(nn.Module):
         for idx in range(num):
             gt_loc = targets[idx][:,:-1].data
             gt_cls = targets[idx][:,-1].data > self.bg_class_id
+
+            if self.num_classes > 2:
+                gt_cls = gt_cls > self.bg_class_id
+
             if arm_data:
                 loc_t[idx], conf_t[idx] = refine_match(self.overlap_threshold, gt_loc, gt_cls, priors, arm_loc[idx].data, self.variance)
             else:
