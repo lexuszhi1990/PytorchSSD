@@ -130,14 +130,17 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
         net = torch.nn.DataParallel(net, device_ids=gpu_ids)
 
     timer = Timer()
+    mean_odm_loss_c = 0
+    mean_odm_loss_l = 0
+    mean_arm_loss_c = 0
+    mean_arm_loss_l = 0
+    log_interval = 10
     optimizer = optim.SGD(net.parameters(), lr=base_lr,
                           momentum=momentum, weight_decay=weight_decay)
     # optimizer = optim.RMSprop(net.parameters(), lr=base_lr,alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
     scheduler = MultiStepLR(optimizer, milestones=[30, 80, 100, 180], gamma=0.85)
-
     arm_criterion = RefineMultiBoxLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
     odm_criterion = RefineMultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
-
     logging.info('Loading datasets...')
     train_dataset_loader = data.DataLoader(train_dataset, batch_size,
                                            shuffle=True,
@@ -156,8 +159,13 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
 
             timer.tic()
             arm_loc, arm_conf, odm_loc, odm_conf = net(images)
+            timer.toc()
             arm_loss_l, arm_loss_c = arm_criterion((arm_loc, arm_conf), priors, targets)
             odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets, (arm_loc,arm_conf), False)
+            mean_arm_loss_l += arm_loss_l.data[0]
+            mean_arm_loss_c += arm_loss_c.data[0]
+            mean_odm_loss_l += odm_loss_l.data[0]
+            mean_odm_loss_c += odm_loss_c.data[0]
 
             if epoch <= 100:
                 loss = arm_loss_l + arm_loss_c
@@ -169,13 +177,16 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            timer.toc()
 
-            if iteration % 10 == 0:
-                logging.info("[%d/%d] || total_loss: %.4f(arm_loc_loss: %.4f arm_class_loss: %.4f obm_loc_loss: %.4f obm_class_loss: %.4f) || Batch time: %.4f sec. || LR: %.6f" % (epoch, iteration, loss, arm_loss_l, arm_loss_c, odm_loss_l, odm_loss_c, timer.average_time, optimizer.param_groups[0]['lr']))
+            if iteration % log_interval == 0:
+                logging.info("[%d/%d] || total_loss: %.4f(mean_arm_loc_loss: %.4f mean_arm_cls_loss: %.4f mean_obm_loc_loss: %.4f mean_obm_cls_loss: %.4f) || Batch time: %.4f sec. || LR: %.6f" % (epoch, iteration, loss, mean_arm_loss_l/log_interval, mean_arm_loss_c/log_interval, mean_odm_loss_l/log_interval, mean_odm_loss_c/log_interval, timer.average_time, optimizer.param_groups[0]['lr']))
                 timer.clear()
+                mean_odm_loss_c = 0
+                mean_odm_loss_l = 0
+                mean_arm_loss_c = 0
+                mean_arm_loss_l = 0
 
-        if save_frequency % epoch == 0:
+        if epoch % save_frequency == 0:
             save_ckpt_path = workspace_path.joinpath("refineDet-model-%d.pt" %(epoch))
             torch.save(net, save_ckpt_path)
             logging.info("save model to %s " % save_ckpt_path)

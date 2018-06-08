@@ -67,7 +67,7 @@ class RefineMultiBoxLoss(nn.Module):
             gt_loc = targets[idx][:,:-1].data
             gt_cls = targets[idx][:,-1].data > self.bg_class_id
             if arm_data:
-                refine_match(self.overlap_threshold, gt_loc, priors,self.variance, gt_cls, loc_t, conf_t, idx, arm_loc[idx].data)
+                loc_t[idx], conf_t[idx] = refine_match(self.overlap_threshold, gt_loc, gt_cls, priors, arm_loc[idx].data, self.variance)
             else:
                 loc_t[idx], conf_t[idx] = match(self.overlap_threshold, gt_loc, gt_cls, priors, self.variance)
 
@@ -82,7 +82,6 @@ class RefineMultiBoxLoss(nn.Module):
             pos = conf_t > 0
             object_score_index = arm_conf_data <= self.object_score
             pos[object_score_index] = 0
-
         else:
             pos = conf_t > 0
 
@@ -92,7 +91,6 @@ class RefineMultiBoxLoss(nn.Module):
         loc_p = loc_data[pos_idx].view(-1,4)
         loc_t = loc_t[pos_idx].view(-1,4)
         loss_l = F.smooth_l1_loss(loc_p, loc_t, size_average=False)
-
         # Compute max conf across batch for hard negative mining
         batch_conf = conf_data.view(-1,self.num_classes)
         loss_c = log_sum_exp(batch_conf) - batch_conf.gather(1, conf_t.view(-1,1))
