@@ -273,9 +273,9 @@ class COCODet(data.Dataset):
             json.dump(results, fid)
 
     def evaluate_detections(self, all_boxes, output_dir):
-        res_file = Path(output_dir, "detections_%s_results.json" % (self.coco_name)).as_posix()
+        res_file = Path(output_dir, "detections_%s_results.json" % (self.image_set)).as_posix()
         self._write_coco_results_file(all_boxes, res_file)
         # Only do evaluation on non-test sets
-        if self.coco_name.find('test') == -1:
+        if self.image_set.find('test') == -1:
             self._do_detection_eval(res_file, output_dir)
         # Optionally cleanup results json file

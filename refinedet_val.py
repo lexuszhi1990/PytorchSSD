@@ -68,7 +68,7 @@ parser.add_argument('--gamma', default=0.1,
                     type=float, help='Gamma update for SGD')
 parser.add_argument('--log_iters', default=True,
                     type=bool, help='Print the loss at each iteration')
-parser.add_argument('--save_folder', default='/mnt/lvmhdd1/zuoxin/ssd_pytorch_models/refine/',
+parser.add_argument('--save_folder', default='./workspace/val-v1',
                     help='Location to save checkpoint models')
 parser.add_argument('--date',default='0327')
 parser.add_argument('--save_frequency',default=10)
@@ -152,7 +152,7 @@ def val(net, detector, priors, testset, num_classes, transform, save_folder, ena
 if __name__ == '__main__':
 
     args = parser.parse_args()
-    save_folder = os.path.join(args.save_folder, args.version+'_'+args.size, args.date)
+    save_folder = os.path.join(args.save_folder)
     enable_cuda = args.cuda and torch.cuda.is_available()
     if enable_cuda:
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -160,6 +160,7 @@ if __name__ == '__main__':
     num_classes = 81
     data_shape = 320
     resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/refinedet_vgg_0516/Refine_vgg_COCO_epoches_250.pth'
+    # resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/refinedet_vgg_0516/Refine_vgg_COCO_epoches_250.pth'
 
     net = build_net(data_shape, num_classes, use_refine=True)
     state_dict = torch.load(resume_net_path)
