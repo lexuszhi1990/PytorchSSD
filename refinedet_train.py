@@ -49,7 +49,7 @@ parser.add_argument('--resume_epoch', default=0, type=int, help='resume iter for
 parser.add_argument('--max_epoch', default=300, type=int, help='max epoch for retraining')
 parser.add_argument('--save_frequency', default=10, type=int, help='epoch for saving ckpt')
 parser.add_argument('--jaccard_threshold', default=0.5, type=float, help='Min Jaccard index for matching')
-parser.add_argument('--num_workers', default=8, type=int, help='Number of workers used in dataloading')
+parser.add_argument('--num_workers', default=4, type=int, help='Number of workers used in dataloading')
 parser.add_argument('--visdom', default=False, type=str2bool, help='Use visdom to for loss visualization')
 
 parser.add_argument('--warm_epoch', default=1,
@@ -134,8 +134,9 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
                           momentum=momentum, weight_decay=weight_decay)
     # optimizer = optim.RMSprop(net.parameters(), lr=base_lr,alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
     scheduler = MultiStepLR(optimizer, milestones=[30, 80, 100, 180], gamma=0.85)
-    arm_criterion = RefineMultiBoxLoss(2, 0.5, True, 0, True, 3, 0.5, False, enable_cuda=enable_cuda)
-    odm_criterion = RefineMultiBoxLoss(num_classes, 0.5, True, 0, True, 3, 0.5, False, 0.01, enable_cuda=enable_cuda)
+
+    arm_criterion = RefineMultiBoxLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
+    odm_criterion = RefineMultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
 
     logging.info('Loading datasets...')
     train_dataset_loader = data.DataLoader(train_dataset, batch_size,
@@ -158,9 +159,9 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
             arm_loss_l, arm_loss_c = arm_criterion((arm_loc, arm_conf), priors, targets)
             odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets, (arm_loc,arm_conf), False)
 
-            if epoch <= 50:
-                loss = 0.9*arm_loss_l + 0.9*arm_loss_c + 0.1*odm_loss_l + 0.1*odm_loss_c
-            elif epoch > 50 and epoch < 100:
+            if epoch <= 100:
+                loss = arm_loss_l + arm_loss_c
+            elif epoch > 100 and epoch < 200:
                 loss = 0.5*arm_loss_l + 0.5*arm_loss_c + 0.5*odm_loss_l + 0.5*odm_loss_c
             else:
                 loss = 0.2*arm_loss_l + 0.2*arm_loss_c + 0.8*odm_loss_l + 0.8*odm_loss_c

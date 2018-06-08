@@ -7,8 +7,8 @@ from src.utils.box_utils import match, refine_match, log_sum_exp, decode
 class RefineMultiBoxLoss(nn.Module):
     """SSD Weighted Loss Function
     Compute Targets:
-        1) Produce Confidence Target Indices by matching  ground truth boxes
-           with (default) 'priorboxes' that have jaccard index > threshold parameter
+        1) Produce Confidence Target Indices by matching ground truth boxes
+           with (default) 'prior boxes' that have jaccard index > threshold parameter
            (default threshold: 0.5).
         2) Produce localization target by 'encoding' variance into offsets of ground
            truth boxes and their matched  'priorboxes'.
@@ -27,21 +27,16 @@ class RefineMultiBoxLoss(nn.Module):
         See: https://arxiv.org/pdf/1512.02325.pdf for more details.
     """
 
-
-    def __init__(self, num_classes,overlap_thresh,prior_for_matching,bkg_label,neg_mining,neg_pos,neg_overlap,encode_target,object_score=0, variance=[0.1,0.2], enable_cuda=False):
+    def __init__(self, num_classes, overlap_thresh, neg_pos_ratio, object_score, variance=[0.1,0.2], bg_class_id=0, enable_cuda=False):
         super(RefineMultiBoxLoss, self).__init__()
 
         self.num_classes = num_classes
-        self.threshold = overlap_thresh
-        self.background_label = bkg_label
-        self.encode_target = encode_target
-        self.use_prior_for_matching  = prior_for_matching
-        self.do_neg_mining = neg_mining
-        self.negpos_ratio = neg_pos
-        self.neg_overlap = neg_overlap
+        self.overlap_threshold = overlap_thresh
+        self.neg_pos_ratio = neg_pos_ratio
         self.object_score = object_score
-        self.enable_cuda = enable_cuda
         self.variance = variance
+        self.enable_cuda = enable_cuda
+        self.bg_class_id = bg_class_id
 
     def forward(self, odm_data, priors, targets, arm_data=None, filter_object=False):
         """Multibox Loss
@@ -55,12 +50,12 @@ class RefineMultiBoxLoss(nn.Module):
             ground_truth (tensor): Ground truth boxes and labels for a batch,
                 shape: [batch_size,num_objs,5] (last idx is the label).
             arm_data (tuple): arm branch containg arm_loc and arm_conf
-            filter_object: whether filter out the  prediction according to the arm conf score
+            filter_object: whether filter out the prediction according to the arm conf score
         """
 
-        loc_data,conf_data = odm_data
+        loc_data, conf_data = odm_data
         if arm_data:
-            arm_loc,arm_conf = arm_data
+            arm_loc, arm_conf = arm_data
         priors = priors.data
         num = loc_data.size(0)
         num_priors = (priors.size(0))
@@ -69,21 +64,19 @@ class RefineMultiBoxLoss(nn.Module):
         loc_t = torch.Tensor(num, num_priors, 4)
         conf_t = torch.LongTensor(num, num_priors)
         for idx in range(num):
-            truths = targets[idx][:,:-1].data
-            labels = targets[idx][:,-1].data
-            #for object detection
-            if self.num_classes == 2:
-                labels = labels > 0
+            gt_loc = targets[idx][:,:-1].data
+            gt_cls = targets[idx][:,-1].data > self.bg_class_id
             if arm_data:
-                refine_match(self.threshold,truths,priors,self.variance,labels,loc_t,conf_t,idx,arm_loc[idx].data)
+                refine_match(self.overlap_threshold, gt_loc, priors,self.variance, gt_cls, loc_t, conf_t, idx, arm_loc[idx].data)
             else:
-                match(self.threshold,truths,priors,self.variance,labels,loc_t,conf_t,idx)
+                loc_t[idx], conf_t[idx] = match(self.overlap_threshold, gt_loc, gt_cls, priors, self.variance)
+
         if self.enable_cuda:
             loc_t = loc_t.cuda()
             conf_t = conf_t.cuda()
         # wrap targets
         loc_t = Variable(loc_t, requires_grad=False)
-        conf_t = Variable(conf_t,requires_grad=False)
+        conf_t = Variable(conf_t,  requires_grad=False)
         if arm_data and filter_object:
             arm_conf_data = arm_conf.data[:,:,1]
             pos = conf_t > 0
@@ -110,7 +103,7 @@ class RefineMultiBoxLoss(nn.Module):
         _,loss_idx = loss_c.sort(1, descending=True)
         _,idx_rank = loss_idx.sort(1)
         num_pos = pos.long().sum(1,keepdim=True)
-        num_neg = torch.clamp(self.negpos_ratio*num_pos, max=pos.size(1)-1)
+        num_neg = torch.clamp(self.neg_pos_ratio*num_pos, max=pos.size(1)-1)
         neg = idx_rank < num_neg.expand_as(idx_rank)
 
         # Confidence Loss Including Positive and Negative Examples

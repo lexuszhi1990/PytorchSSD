@@ -30,6 +30,8 @@ CUDA_VISIBLE_DEVICES=1,2 python refinedet_train_test.py --dataset COCO --gpu_ids
 
 CUDA_VISIBLE_DEVICES=2,3 python refinedet_train.py --dataset COCO --gpu_ids 0 1 --cuda --lr 0.05
 
+CUDA_VISIBLE_DEVICES=1 python refinedet_train.py --dataset COCO --gpu_ids 0  --cuda --lr 0.05
+
 ### troubleshoot
 
 #### pyinn
