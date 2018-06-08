@@ -134,7 +134,7 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
     mean_odm_loss_l = 0
     mean_arm_loss_c = 0
     mean_arm_loss_l = 0
-    log_interval = 10
+    log_interval = 50
     arm_optimizer = optim.SGD(net.parameters(), lr=base_lr,
                           momentum=momentum, weight_decay=weight_decay)
     arm_scheduler = MultiStepLR(arm_optimizer, milestones=[10, 20, 30, 40, 50, 80], gamma=0.65)
@@ -199,11 +199,11 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
                 mean_arm_loss_l = 0
 
         if epoch % save_frequency == 0:
-            save_ckpt_path = workspace_path.joinpath("refineDet-model-%d.pt" %(epoch))
+            save_ckpt_path = workspace_path.joinpath("refineDet-model-%d.pth" %(epoch))
             torch.save(net, save_ckpt_path)
             logging.info("save model to %s " % save_ckpt_path)
 
-    torch.save(net, workspace_path.joinpath("Final-refineDet-%d.pt" %(epoch)))
+    torch.save(net, workspace_path.joinpath("Final-refineDet-%d.pth" %(epoch)))
 
 if __name__ == '__main__':
 
