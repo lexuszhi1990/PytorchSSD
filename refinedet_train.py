@@ -135,10 +135,10 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
     mean_arm_loss_c = 0
     mean_arm_loss_l = 0
     log_interval = 10
-    optimizer = optim.SGD(net.parameters(), lr=base_lr,
+    arm_optimizer = optim.SGD(net.parameters(), lr=base_lr,
                           momentum=momentum, weight_decay=weight_decay)
+    arm_scheduler = MultiStepLR(arm_optimizer, milestones=[10, 20, 30, 40, 50, 80], gamma=0.65)
     # optimizer = optim.RMSprop(net.parameters(), lr=base_lr,alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
-    scheduler = MultiStepLR(optimizer, milestones=[30, 80, 100, 180], gamma=0.85)
     arm_criterion = RefineMultiBoxLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
     odm_criterion = RefineMultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
     logging.info('Loading datasets...')
@@ -148,7 +148,19 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
                                            collate_fn=detection_collate)
 
     for epoch in range(1, max_epoch):
+
+        if epoch == 1:
+            optimizer = optim.SGD(net.parameters(), lr=1e-2, momentum=momentum, weight_decay=weight_decay)
+            scheduler = MultiStepLR(optimizer, milestones=[10, 20, 30, 40, 50, 80], gamma=0.65)
+        elif epoch == 100:
+            optimizer = optim.SGD(net.parameters(), lr=1e-3, momentum=momentum, weight_decay=weight_decay)
+            scheduler = MultiStepLR(optimizer, milestones=[10, 20, 30, 40, 50, 80], gamma=0.65)
+        elif epoch == 200:
+            optimizer = optim.SGD(net.parameters(), lr=1e-4, momentum=momentum, weight_decay=weight_decay)
+            scheduler = MultiStepLR(optimizer, milestones=[10, 20, 30, 40, 50, 80], gamma=0.65)
+
         scheduler.step()
+
         for iteration, (images, targets) in enumerate(train_dataset_loader):
             if enable_cuda:
                 images = Variable(images.cuda())
