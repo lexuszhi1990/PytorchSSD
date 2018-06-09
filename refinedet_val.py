@@ -159,7 +159,7 @@ if __name__ == '__main__':
         cudnn.benchmark = True
     num_classes = 81
     data_shape = 320
-    resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/refinedet_vgg_0516/Refine_vgg_COCO_epoches_250.pth'
+    resume_net_path = 'workspace/v1/refineDet-model-80.pth'
     # resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/refinedet_vgg_0516/Refine_vgg_COCO_epoches_250.pth'
 
     net = build_net(data_shape, num_classes, use_refine=True)

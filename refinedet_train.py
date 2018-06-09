@@ -61,7 +61,7 @@ parser.add_argument('--retest', default=False, type=bool,
 parser.add_argument('--test_frequency',default=10)
 parser.add_argument('--send_images_to_visdom', type=str2bool, default=False, help='Sample a random image from each 10th batch, send it to visdom after augmentations step')
 
-def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, base_lr, momentum, weight_decay, gamma, gpu_ids, enable_cuda, max_epoch, resume, resume_epoch, num_workers, save_frequency, enable_visdom):
+def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, base_lr, momentum, weight_decay, gamma, gpu_ids, enable_cuda, max_epoch, resume, resume_epoch, num_workers, save_frequency, basenet, enable_visdom):
 
     if enable_visdom:
         viz = visdom.Visdom()
@@ -82,9 +82,6 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
     net = build_net(320, num_classes, use_refine=True)
     logging.info(net)
     if not resume:
-        # base_weights = torch.load(args.basenet)
-        # logging.info('Loading base network...')
-        # net.base.load_state_dict(base_weights)
 
         def xavier(param):
             init.xavier_uniform(param)
@@ -101,7 +98,13 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
 
         logging.info('Initializing weights...')
         # initialize newly added layers' weights with kaiming_normal method
-        net.base.apply(weights_init)
+        if Path(basenet).exists():
+            base_weights = torch.load(basenet)
+            logging.info('Loading base network...')
+            net.base.load_state_dict(base_weights)
+        else:
+            net.base.apply(weights_init)
+
         net.extras.apply(weights_init)
         net.trans_layers.apply(weights_init)
         net.latent_layrs.apply(weights_init)
@@ -135,10 +138,6 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
     mean_arm_loss_c = 0
     mean_arm_loss_l = 0
     log_interval = 50
-    arm_optimizer = optim.SGD(net.parameters(), lr=base_lr,
-                          momentum=momentum, weight_decay=weight_decay)
-    arm_scheduler = MultiStepLR(arm_optimizer, milestones=[10, 20, 30, 40, 50, 80], gamma=0.65)
-    # optimizer = optim.RMSprop(net.parameters(), lr=base_lr,alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
     arm_criterion = RefineMultiBoxLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
     odm_criterion = RefineMultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
     logging.info('Loading datasets...')
@@ -147,17 +146,20 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
                                            num_workers=num_workers,
                                            collate_fn=detection_collate)
 
+    # optimizer = optim.RMSprop(net.parameters(), lr=base_lr,alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
+    optimizer = optim.SGD(net.parameters(), lr=1e-3, momentum=momentum, weight_decay=weight_decay)
+    scheduler = MultiStepLR(optimizer, milestones=[50, 80, 100, 150, 200], gamma=0.65)
     for epoch in range(1, max_epoch):
 
-        if epoch == 1:
-            optimizer = optim.SGD(net.parameters(), lr=1e-2, momentum=momentum, weight_decay=weight_decay)
-            scheduler = MultiStepLR(optimizer, milestones=[10, 20, 30, 40, 50, 80], gamma=0.65)
-        elif epoch == 100:
-            optimizer = optim.SGD(net.parameters(), lr=1e-3, momentum=momentum, weight_decay=weight_decay)
-            scheduler = MultiStepLR(optimizer, milestones=[10, 20, 30, 40, 50, 80], gamma=0.65)
-        elif epoch == 200:
-            optimizer = optim.SGD(net.parameters(), lr=1e-4, momentum=momentum, weight_decay=weight_decay)
-            scheduler = MultiStepLR(optimizer, milestones=[10, 20, 30, 40, 50, 80], gamma=0.65)
+        # if epoch == 1:
+        #     optimizer = optim.SGD(net.parameters(), lr=1e-3, momentum=momentum, weight_decay=weight_decay)
+        #     scheduler = MultiStepLR(optimizer, milestones=[10, 20, 30, 40, 50, 80], gamma=0.65)
+        # elif epoch == 100:
+        #     optimizer = optim.SGD(net.parameters(), lr=1e-3, momentum=momentum, weight_decay=weight_decay)
+        #     scheduler = MultiStepLR(optimizer, milestones=[10, 20, 30, 40, 50, 80], gamma=0.65)
+        # elif epoch == 200:
+        #     optimizer = optim.SGD(net.parameters(), lr=1e-4, momentum=momentum, weight_decay=weight_decay)
+        #     scheduler = MultiStepLR(optimizer, milestones=[10, 20, 30, 40, 50, 80], gamma=0.65)
 
         scheduler.step()
 
@@ -200,10 +202,10 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
 
         if epoch % save_frequency == 0:
             save_ckpt_path = workspace_path.joinpath("refineDet-model-%d.pth" %(epoch))
-            torch.save(net, save_ckpt_path)
+            torch.save(net.state_dict(), save_ckpt_path)
             logging.info("save model to %s " % save_ckpt_path)
 
-    torch.save(net, workspace_path.joinpath("Final-refineDet-%d.pth" %(epoch)))
+    torch.save(net.state_dict(), workspace_path.joinpath("Final-refineDet-%d.pth" %(epoch)))
 
 if __name__ == '__main__':
 
@@ -222,6 +224,7 @@ if __name__ == '__main__':
     gamma = args.gamma
     num_workers = args.num_workers
     save_frequency = args.save_frequency
+    basenet = args.basenet
     enable_visdom = args.visdom
     gpu_ids = [int(i) for i in args.gpu_ids]
     enable_cuda = args.cuda and torch.cuda.is_available() and len(gpu_ids) > 0
@@ -247,4 +250,4 @@ if __name__ == '__main__':
         train_dataset = COCODet(root_path, train_sets, preproc(img_dim, rgb_means, rgb_std, augment_ratio))
         val_dataset = COCODet(root_path, val_sets, None)
 
-    train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, base_lr, momentum, weight_decay, gamma, gpu_ids, enable_cuda, max_epoch, resume, resume_epoch, num_workers, save_frequency, enable_visdom)
+    train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, base_lr, momentum, weight_decay, gamma, gpu_ids, enable_cuda, max_epoch, resume, resume_epoch, num_workers, save_frequency, basenet, enable_visdom)
