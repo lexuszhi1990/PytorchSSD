@@ -49,6 +49,12 @@ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.178
 Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.487
 Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.607
 
+|Method|Data|Backbone|AP|AP/50|AP/75|AP/S|AP/M|AP/L|
+|------|----|--------|--|-----|-----|----|----|----|
+|RefineDet320-caffe|trainval35k|VGG-16|29.4|49.2|31.3|10.0|32.0|44.4|
+|RefineDet320-pytorch|trainval35k|VGG-16|27.6|47.9|28.8|10.3|32.0|41.
+6|
+
 ### troubleshoot
 
 #### pyinn

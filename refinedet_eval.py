@@ -145,6 +145,6 @@ if __name__ == '__main__':
         for det in all_boxes[class_id]:
             left, top, right, bottom, score = det
             img_det = cv2.rectangle(img, (left, top), (right, bottom), (255, 255, 0), 1)
-            img_det = cv2.putText(img_det, '%d:%.3f'%(class_id, score), (int(left), int(top)+30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
+            img_det = cv2.putText(img_det, '%d:%.3f'%(class_id, score), (int(left), int(top)+15), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 1)
 
     cv2.imwrite("./test_3.png", img_det)
