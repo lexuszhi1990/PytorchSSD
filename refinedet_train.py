@@ -49,8 +49,9 @@ parser.add_argument('--resume_epoch', default=0, type=int, help='resume iter for
 parser.add_argument('--max_epoch', default=300, type=int, help='max epoch for retraining')
 parser.add_argument('--save_frequency', default=10, type=int, help='epoch for saving ckpt')
 parser.add_argument('--jaccard_threshold', default=0.5, type=float, help='Min Jaccard index for matching')
-parser.add_argument('--num_workers', default=8, type=int, help='Number of workers used in dataloading')
+parser.add_argument('--num_workers', default=4, type=int, help='Number of workers used in dataloading')
 parser.add_argument('--visdom', default=False, type=str2bool, help='Use visdom to for loss visualization')
+parser.add_argument('--basenet', default='./weights/pretrained/vgg16_reducedfc.pth', help='pretrained base model')
 
 parser.add_argument('--warm_epoch', default=1,
                     type=int, help='max epoch for retraining')
@@ -59,7 +60,6 @@ parser.add_argument('--retest', default=False, type=bool,
                     help='test cache results')
 parser.add_argument('--test_frequency',default=10)
 parser.add_argument('--send_images_to_visdom', type=str2bool, default=False, help='Sample a random image from each 10th batch, send it to visdom after augmentations step')
-parser.add_argument('--basenet', default='/mnt/lvmhdd1/zuoxin/ssd_pytorch_models/vgg16_reducedfc.pth', help='pretrained base model')
 
 def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, base_lr, momentum, weight_decay, gamma, gpu_ids, enable_cuda, max_epoch, resume, resume_epoch, num_workers, save_frequency, enable_visdom):
 
@@ -130,13 +130,17 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
         net = torch.nn.DataParallel(net, device_ids=gpu_ids)
 
     timer = Timer()
-    optimizer = optim.SGD(net.parameters(), lr=base_lr,
+    mean_odm_loss_c = 0
+    mean_odm_loss_l = 0
+    mean_arm_loss_c = 0
+    mean_arm_loss_l = 0
+    log_interval = 50
+    arm_optimizer = optim.SGD(net.parameters(), lr=base_lr,
                           momentum=momentum, weight_decay=weight_decay)
-    scheduler = MultiStepLR(optimizer, milestones=[30,80], gamma=0.5)
+    arm_scheduler = MultiStepLR(arm_optimizer, milestones=[10, 20, 30, 40, 50, 80], gamma=0.65)
     # optimizer = optim.RMSprop(net.parameters(), lr=base_lr,alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
-    arm_criterion = RefineMultiBoxLoss(2, 0.5, True, 0, True, 3, 0.5, False, enable_cuda=enable_cuda)
-    odm_criterion = RefineMultiBoxLoss(num_classes, 0.5, True, 0, True, 3, 0.5, False, 0.01, enable_cuda=enable_cuda)
-
+    arm_criterion = RefineMultiBoxLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
+    odm_criterion = RefineMultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
     logging.info('Loading datasets...')
     train_dataset_loader = data.DataLoader(train_dataset, batch_size,
                                            shuffle=True,
@@ -144,7 +148,19 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
                                            collate_fn=detection_collate)
 
     for epoch in range(1, max_epoch):
+
+        if epoch == 1:
+            optimizer = optim.SGD(net.parameters(), lr=1e-2, momentum=momentum, weight_decay=weight_decay)
+            scheduler = MultiStepLR(optimizer, milestones=[10, 20, 30, 40, 50, 80], gamma=0.65)
+        elif epoch == 100:
+            optimizer = optim.SGD(net.parameters(), lr=1e-3, momentum=momentum, weight_decay=weight_decay)
+            scheduler = MultiStepLR(optimizer, milestones=[10, 20, 30, 40, 50, 80], gamma=0.65)
+        elif epoch == 200:
+            optimizer = optim.SGD(net.parameters(), lr=1e-4, momentum=momentum, weight_decay=weight_decay)
+            scheduler = MultiStepLR(optimizer, milestones=[10, 20, 30, 40, 50, 80], gamma=0.65)
+
         scheduler.step()
+
         for iteration, (images, targets) in enumerate(train_dataset_loader):
             if enable_cuda:
                 images = Variable(images.cuda())
@@ -155,24 +171,39 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
 
             timer.tic()
             arm_loc, arm_conf, odm_loc, odm_conf = net(images)
+            timer.toc()
             arm_loss_l, arm_loss_c = arm_criterion((arm_loc, arm_conf), priors, targets)
-            odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets, (arm_loc,arm_conf), False)
-            loss = arm_loss_l + arm_loss_c + odm_loss_l + odm_loss_c
+            odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets, (arm_loc, arm_conf), False)
+            mean_arm_loss_l += arm_loss_l.data[0]
+            mean_arm_loss_c += arm_loss_c.data[0]
+            mean_odm_loss_l += odm_loss_l.data[0]
+            mean_odm_loss_c += odm_loss_c.data[0]
+
+            if epoch <= 100:
+                loss = arm_loss_l + arm_loss_c
+            elif epoch > 100 and epoch < 200:
+                loss = 0.5*arm_loss_l + 0.5*arm_loss_c + 0.5*odm_loss_l + 0.5*odm_loss_c
+            else:
+                loss = 0.2*arm_loss_l + 0.2*arm_loss_c + 0.8*odm_loss_l + 0.8*odm_loss_c
+
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            timer.toc()
 
-            if iteration % 10 == 0:
-                logging.info("[%d/%d] || total_loss: %.4f(arm_loc_loss: %.4f arm_class_loss: %.4f obm_loc_loss: %.4f obm_class_loss: %.4f) || Batch time: %.4f sec. || LR: %.6f" % (epoch, iteration, loss, arm_loss_l, arm_loss_c, odm_loss_l, odm_loss_c, timer.average_time, optimizer.param_groups[0]['lr']))
+            if iteration % log_interval == 0:
+                logging.info("[%d/%d] || total_loss: %.4f(mean_arm_loc_loss: %.4f mean_arm_cls_loss: %.4f mean_obm_loc_loss: %.4f mean_obm_cls_loss: %.4f) || Batch time: %.4f sec. || LR: %.6f" % (epoch, iteration, loss, mean_arm_loss_l/log_interval, mean_arm_loss_c/log_interval, mean_odm_loss_l/log_interval, mean_odm_loss_c/log_interval, timer.average_time, optimizer.param_groups[0]['lr']))
                 timer.clear()
+                mean_odm_loss_c = 0
+                mean_odm_loss_l = 0
+                mean_arm_loss_c = 0
+                mean_arm_loss_l = 0
 
-        if save_frequency % epoch == 0:
-            save_ckpt_path = workspace_path.joinpath("refineDet-model-%d.pt" %(epoch))
+        if epoch % save_frequency == 0:
+            save_ckpt_path = workspace_path.joinpath("refineDet-model-%d.pth" %(epoch))
             torch.save(net, save_ckpt_path)
             logging.info("save model to %s " % save_ckpt_path)
 
-    torch.save(net, workspace_path.joinpath("Final-refineDet-%d.pt" %(epoch)))
+    torch.save(net, workspace_path.joinpath("Final-refineDet-%d.pth" %(epoch)))
 
 if __name__ == '__main__':
 

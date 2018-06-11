@@ -8,11 +8,11 @@ from src.utils.box_utils import match, log_sum_exp
 class MultiBoxLoss(nn.Module):
     """SSD Weighted Loss Function
     Compute Targets:
-        1) Produce Confidence Target Indices by matching  ground truth boxes
+        1) Produce Confidence Target Indices by matching ground truth boxes
            with (default) 'priorboxes' that have jaccard index > threshold parameter
            (default threshold: 0.5).
         2) Produce localization target by 'encoding' variance into offsets of ground
-           truth boxes and their matched  'priorboxes'.
+           truth boxes and their matched 'priorboxes'.
         3) Hard negative mining to filter the excessive number of negative examples
            that comes with using a large number of default bounding boxes.
            (default negative:positive ratio 3:1)

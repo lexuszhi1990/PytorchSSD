@@ -81,17 +81,17 @@ def matrix_iou(a,b):
     return area_i / (area_a[:, np.newaxis] + area_b - area_i)
 
 
-def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
+def match(threshold, gt_loc, gt_cls, priors, variances):
     """Match each prior box with the ground truth box of the highest jaccard
     overlap, encode the bounding boxes, then return the matched indices
     corresponding to both confidence and location preds.
     Args:
         threshold: (float) The overlap threshold used when mathing boxes.
-        truths: (tensor) Ground truth boxes, Shape: [num_obj, num_priors].
+        gt_loc: (tensor) Ground truth boxes, Shape: [num_obj, num_priors].
         priors: (tensor) Prior boxes from priorbox layers, Shape: [n_priors,4].
         variances: (tensor) Variances corresponding to each prior coord,
             Shape: [num_priors, 4].
-        labels: (tensor) All the class labels for the image, Shape: [num_obj].
+        gt_cls: (tensor) All the class gt_cls for the image, Shape: [num_obj].
         loc_t: (tensor) Tensor to be filled w/ endcoded location targets.
         conf_t: (tensor) Tensor to be filled w/ matched indices for conf preds.
         idx: (int) current batch index
@@ -100,11 +100,10 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
     """
     # jaccard index
     overlaps = jaccard(
-        truths,
+        gt_loc,
         point_form(priors)
     )
     # (Bipartite Matching)
-    # [1,num_objects] best prior for each ground truth
     best_prior_overlap, best_prior_idx = overlaps.max(1, keepdim=True)
     # [1,num_priors] best ground truth for each prior
     best_truth_overlap, best_truth_idx = overlaps.max(0, keepdim=True)
@@ -117,36 +116,36 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
     # ensure every gt matches with its prior of max overlap
     for j in range(best_prior_idx.size(0)):
         best_truth_idx[best_prior_idx[j]] = j
-    matches = truths[best_truth_idx]          # Shape: [num_priors,4]
-    conf = labels[best_truth_idx]          # Shape: [num_priors]
+    matches = gt_loc[best_truth_idx]          # Shape: [num_priors,4]
+    conf = gt_cls[best_truth_idx]          # Shape: [num_priors]
     conf[best_truth_overlap < threshold] = 0  # label as background
     loc = encode(matches, priors, variances)
-    loc_t[idx] = loc    # [num_priors,4] encoded offsets to learn
-    conf_t[idx] = conf  # [num_priors] top class label for each prior
 
-def refine_match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx,arm_loc):
+    return loc, conf
+
+def refine_match(threshold, gt_loc, gt_cls, priors, arm_loc, variances):
     """Match each arm bbox with the ground truth box of the highest jaccard
     overlap, encode the bounding boxes, then return the matched indices
     corresponding to both confidence and location preds.
     Args:
         threshold: (float) The overlap threshold used when mathing boxes.
-        truths: (tensor) Ground truth boxes, Shape: [num_obj, num_priors].
+        gt_loc: (tensor) Ground truth boxes, Shape: [num_obj, num_priors].
+        gt_cls: (tensor) All the class labels for the image, Shape: [num_obj].
         priors: (tensor) Prior boxes from priorbox layers, Shape: [n_priors,4].
+        arm_loc: (tensor) arm loc data,shape: [n_priors,4]
         variances: (tensor) Variances corresponding to each prior coord,
             Shape: [num_priors, 4].
-        labels: (tensor) All the class labels for the image, Shape: [num_obj].
         loc_t: (tensor) Tensor to be filled w/ endcoded location targets.
         conf_t: (tensor) Tensor to be filled w/ matched indices for conf preds.
         idx: (int) current batch index
-        arm_loc: (tensor) arm loc data,shape: [n_priors,4]
     Return:
         The matched indices corresponding to 1)location and 2)confidence preds.
     """
     # decode arm box
-    decode_arm = decode(arm_loc,priors=priors,variances=variances)
+    decode_arm = decode(arm_loc, priors=priors, variances=variances)
     # jaccard index
     overlaps = jaccard(
-        truths,
+        gt_loc,
         decode_arm
     )
     # (Bipartite Matching)
@@ -163,12 +162,14 @@ def refine_match(threshold, truths, priors, variances, labels, loc_t, conf_t, id
     # ensure every gt matches with its prior of max overlap
     for j in range(best_prior_idx.size(0)):
         best_truth_idx[best_prior_idx[j]] = j
-    matches = truths[best_truth_idx]          # Shape: [num_priors,4]
-    conf = labels[best_truth_idx]          # Shape: [num_priors]
+    matches = gt_loc[best_truth_idx]          # Shape: [num_priors,4]
+    conf = gt_cls[best_truth_idx]             # Shape: [num_priors]
     conf[best_truth_overlap < threshold] = 0  # label as background
     loc = encode(matches, center_size(decode_arm), variances)
-    loc_t[idx] = loc    # [num_priors,4] encoded offsets to learn
-    conf_t[idx] = conf  # [num_priors] top class label for each prior
+
+    # loc  : [num_priors,4] encoded offsets to learn
+    # conf : [num_priors] top class label for each prior
+    return loc, conf
 
 def encode(matched, priors, variances):
     """Encode the variances from the priorbox layers into the ground truth boxes
