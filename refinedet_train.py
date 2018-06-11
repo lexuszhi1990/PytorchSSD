@@ -182,7 +182,7 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
             mean_odm_loss_c += odm_loss_c.data[0]
 
             if epoch <= 100:
-                loss = arm_loss_l + arm_loss_c
+                loss = 0.8*arm_loss_l + 0.8*arm_loss_c + 0.2*odm_loss_l + 0.2*odm_loss_c
             elif epoch > 100 and epoch < 200:
                 loss = 0.5*arm_loss_l + 0.5*arm_loss_c + 0.5*odm_loss_l + 0.5*odm_loss_c
             else:

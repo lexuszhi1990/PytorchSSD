@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 
 root_dir = '/mnt/dataset/coco'
 image_set = 'train2017'
+# image_set = 'val2017'
 anno_file = Path(root_dir, 'annotations', "instances_%s.json" % (image_set))
 coco=COCO(anno_file.as_posix())
 len(coco.imgs)
@@ -23,13 +24,20 @@ data=json.load(anno_file.open('r'))
 new_data={}
 new_data['info']=data['info']
 new_data['licenses']=data['licenses']
-new_data['categories']=data['categories']
+new_data['categories']=[]
 new_data['images']=[]
 new_data['annotations']=[]
 
 sub_cat_ids = [1]
 new_annotations = []
 new_images = []
+new_categories = []
+
+for cat_id in sub_cat_ids:
+    for cat in data['categories']:
+        if cat['id'] == cat_id:
+            new_categories.append(cat)
+new_data['categories'] = new_categories
 
 img_ids = []
 for anno in data['annotations']:
