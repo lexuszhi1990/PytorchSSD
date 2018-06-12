@@ -36,6 +36,11 @@ CUDA_VISIBLE_DEVICES=1 python refinedet_train.py --dataset COCO --gpu_ids 0  --c
 
 python refinedet_val.py
 
+Collecting person results (1/81) : 25.8
+Collecting bicycle results (2/81) : 35.0
+Collecting car results (3/81) : 15.7
+Collecting motorcycle results (4/81) : 23.0
+
 Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.276
 Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.479
 Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.288
@@ -48,6 +53,55 @@ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.414
 Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.178
 Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.487
 Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.607
+
+|Method|Data|Backbone|AP|AP/50|AP/75|AP/S|AP/M|AP/L|
+|------|----|--------|--|-----|-----|----|----|----|
+|RefineDet320-caffe|trainval35k|VGG-16|29.4|49.2|31.3|10.0|32.0|44.4|
+|RefineDet320-pytorch|trainval35k|VGG-16|27.6|47.9|28.8|10.3|32.0|41.
+6|
+
+
+#### 2018.6.11
+
+~~~~ Mean and per-category AP @ IoU=[0.50,0.95] ~~~~
+32.8
+32.8
+~~~~ Summary metrics ~~~~
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.328
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.645
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.297
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.136
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.415
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.540
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.146
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.368
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.424
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.214
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.510
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.639
+Wrote COCO eval results to: workspace/val-v2/detection_results.pkl
+
+
+#### 2018.6.12
+
+~~~~ Summary metrics ~~~~
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.368
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.677
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.364
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.156
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.466
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.590
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.159
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.402
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.455
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.233
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.547
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.680
+Wrote COCO eval results to: workspace/val-v2/detection_results.pkl
+
+train coco :
+CUDA_VISIBLE_DEVICES=6,7 python refinedet_train.py --dataset COCO --gpu_ids 0 1 --cuda --batch_size 64 --workspace /mnt/ckpt/pytorchSSD/Refine_vgg_320/v1 --num_workers 8
+
 
 ### troubleshoot
 
