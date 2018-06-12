@@ -148,18 +148,8 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
 
     # optimizer = optim.RMSprop(net.parameters(), lr=base_lr,alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
     optimizer = optim.SGD(net.parameters(), lr=1e-3, momentum=momentum, weight_decay=weight_decay)
-    scheduler = MultiStepLR(optimizer, milestones=[50, 80, 100, 150, 200], gamma=0.65)
+    scheduler = MultiStepLR(optimizer, milestones=[80, 100, 150, 200], gamma=0.85)
     for epoch in range(1, max_epoch):
-
-        # if epoch == 1:
-        #     optimizer = optim.SGD(net.parameters(), lr=1e-3, momentum=momentum, weight_decay=weight_decay)
-        #     scheduler = MultiStepLR(optimizer, milestones=[10, 20, 30, 40, 50, 80], gamma=0.65)
-        # elif epoch == 100:
-        #     optimizer = optim.SGD(net.parameters(), lr=1e-3, momentum=momentum, weight_decay=weight_decay)
-        #     scheduler = MultiStepLR(optimizer, milestones=[10, 20, 30, 40, 50, 80], gamma=0.65)
-        # elif epoch == 200:
-        #     optimizer = optim.SGD(net.parameters(), lr=1e-4, momentum=momentum, weight_decay=weight_decay)
-        #     scheduler = MultiStepLR(optimizer, milestones=[10, 20, 30, 40, 50, 80], gamma=0.65)
 
         scheduler.step()
 

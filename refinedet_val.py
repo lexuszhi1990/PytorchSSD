@@ -119,7 +119,7 @@ def val(net, detector, priors, testset, num_classes, transform, save_folder, ena
         nms_time = _t['misc'].toc()
 
         if i % 20 == 0:
-            print('im_detect: {:d}/{:d} {:.3f}s {:.3f}s'.format(i + 1, num_images, detect_time, nms_time))
+            print('im_detect: {:d}/{:d} detect_time:{:.3f}s nms_time:{:.3f}s'.format(i + 1, num_images, detect_time, nms_time))
             _t['im_detect'].clear()
             _t['misc'].clear()
 
@@ -165,8 +165,9 @@ if __name__ == '__main__':
     num_classes, img_dim, rgb_means, rgb_std, augment_ratio = basic_conf.num_classes, basic_conf.img_dim, basic_conf.rgb_means, basic_conf.rgb_std, basic_conf.augment_ratio
     module_cfg = getattr(basic_conf, "dimension_%d"%(int(shape)))
 
-    # resume_net_path = 'workspace/v2/refineDet-model-110.pth'
-    resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/refinedet_vgg_0516/Refine_vgg_COCO_epoches_250.pth'
+    resume_net_path = 'workspace/v1/refineDet-model-210.pth'
+    # resume_net_path = 'workspace/v2/refineDet-model-160.pth'
+    # resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/refinedet_vgg_0516/Refine_vgg_COCO_epoches_250.pth'
 
     net = build_net(int(shape), num_classes, use_refine=True)
     state_dict = torch.load(resume_net_path)
@@ -187,40 +188,3 @@ if __name__ == '__main__':
     val_dataset = COCODet(root_path, val_sets, None)
     val_trainsform = BaseTransform(net.size, rgb_means, rgb_std, (2, 0, 1))
     val(net, detector, priors, val_dataset, num_classes, val_trainsform, workspace, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005)
-
-
-    # args = parser.parse_args()
-    # save_folder = os.path.join(args.save_folder)
-
-    # enable_cuda = args.cuda and torch.cuda.is_available()
-    # if enable_cuda:
-    #     torch.set_default_tensor_type('torch.cuda.FloatTensor')
-    #     cudnn.benchmark = True
-    # num_classes = 81
-    # data_shape = 320
-    # resume_net_path = 'workspace/v2/refineDet-model-110.pth'
-    # resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/refinedet_vgg_0516/Refine_vgg_COCO_epoches_250.pth'
-
-    # net = build_net(data_shape, num_classes, use_refine=True)
-    # state_dict = torch.load(resume_net_path)
-    # new_state_dict = OrderedDict()
-    # for k, v in state_dict.items():
-    #     head = k[:7]
-    #     if head == 'module.':
-    #         name = k[7:] # remove `module.`
-    #     else:
-    #         name = k
-    #     new_state_dict[name] = v
-    # net.load_state_dict(new_state_dict)
-    # print(net)
-
-    # module_cfg = config.coco.dimension_320
-    # rgb_std = (1,1,1)
-    # rgb_means = (104, 117, 123)
-    # priorbox = PriorBox(module_cfg)
-    # priors = Variable(priorbox.forward(), volatile=True)
-    # detector = Detect(num_classes, 0, module_cfg, object_score=0.01)
-    # testset = COCODet(config.coco.root_path, config.coco.val_sets, None)
-    # val_trainsform = BaseTransform(net.size, rgb_means, rgb_std, (2, 0, 1))
-
-    # val(net, detector, priors, testset, num_classes, val_trainsform, save_folder, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005)
