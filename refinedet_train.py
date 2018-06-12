@@ -33,7 +33,7 @@ from src.utils.nms_wrapper import nms
 from src.utils.timer import Timer
 
 parser = argparse.ArgumentParser(
-    description='Refined SSD')
+    description='Refined SSD train')
 parser.add_argument('--workspace', default='./workspace')
 parser.add_argument('--shape', default='320', help='320 or 512 input size.')
 parser.add_argument('--dataset', default='COCO', help='VOC or COCO dataset')

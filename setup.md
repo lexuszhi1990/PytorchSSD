@@ -36,6 +36,11 @@ CUDA_VISIBLE_DEVICES=1 python refinedet_train.py --dataset COCO --gpu_ids 0  --c
 
 python refinedet_val.py
 
+Collecting person results (1/81) : 25.8
+Collecting bicycle results (2/81) : 35.0
+Collecting car results (3/81) : 15.7
+Collecting motorcycle results (4/81) : 23.0
+
 Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.276
 Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.479
 Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.288

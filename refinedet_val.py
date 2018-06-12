@@ -161,12 +161,12 @@ if __name__ == '__main__':
     else:
         raise RuntimeError("not support dataset %s" % (dataset))
 
-
     root_path, train_sets, val_sets = basic_conf.root_path,  basic_conf.train_sets, basic_conf.val_sets
     num_classes, img_dim, rgb_means, rgb_std, augment_ratio = basic_conf.num_classes, basic_conf.img_dim, basic_conf.rgb_means, basic_conf.rgb_std, basic_conf.augment_ratio
     module_cfg = getattr(basic_conf, "dimension_%d"%(int(shape)))
 
-    resume_net_path = 'workspace/v2/refineDet-model-110.pth'
+    # resume_net_path = 'workspace/v2/refineDet-model-110.pth'
+    resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/refinedet_vgg_0516/Refine_vgg_COCO_epoches_250.pth'
 
     net = build_net(int(shape), num_classes, use_refine=True)
     state_dict = torch.load(resume_net_path)
@@ -189,12 +189,8 @@ if __name__ == '__main__':
     val(net, detector, priors, val_dataset, num_classes, val_trainsform, workspace, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005)
 
 
-
-
-
     # args = parser.parse_args()
     # save_folder = os.path.join(args.save_folder)
-
 
     # enable_cuda = args.cuda and torch.cuda.is_available()
     # if enable_cuda:
@@ -203,7 +199,7 @@ if __name__ == '__main__':
     # num_classes = 81
     # data_shape = 320
     # resume_net_path = 'workspace/v2/refineDet-model-110.pth'
-    # # resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/refinedet_vgg_0516/Refine_vgg_COCO_epoches_250.pth'
+    # resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/refinedet_vgg_0516/Refine_vgg_COCO_epoches_250.pth'
 
     # net = build_net(data_shape, num_classes, use_refine=True)
     # state_dict = torch.load(resume_net_path)
