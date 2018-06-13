@@ -9,6 +9,13 @@ docker run --network host --ipc host -v /home/david/fashionAI/PytorchSSD:/app -v
 local dev:
 docker run --name py-ssd --network host --ipc host -v /Users/david/repo/detection/PytorchSSD:/app -v /Users/david/mnt/data/VOCdevkit:/mnt/dataset/voc2012 -it --rm floydhub/pytorch:0.3.1-py3.26 bash
 
+set nms:
+
+```
+cd src/utils
+python build.py build_ext --inplace
+```
+
 ### daily log
 
 #### 2018.5.16
