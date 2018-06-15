@@ -146,9 +146,9 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
                                            num_workers=num_workers,
                                            collate_fn=detection_collate)
 
-    # optimizer = optim.RMSprop(net.parameters(), lr=base_lr,alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
-    optimizer = optim.SGD(net.parameters(), lr=1e-3, momentum=momentum, weight_decay=weight_decay)
-    scheduler = MultiStepLR(optimizer, milestones=[80, 100, 150, 200], gamma=0.85)
+    # optimizer = optim.RMSprop(net.parameters(), lr=base_lr, alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
+    optimizer = optim.SGD(net.parameters(), lr=base_lr, momentum=momentum, weight_decay=weight_decay)
+    scheduler = MultiStepLR(optimizer, milestones=[ i*10 for i in range(1, 30) ], gamma=0.5)
     for epoch in range(1, max_epoch):
 
         scheduler.step()

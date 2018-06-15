@@ -165,8 +165,8 @@ if __name__ == '__main__':
     num_classes, img_dim, rgb_means, rgb_std, augment_ratio = basic_conf.num_classes, basic_conf.img_dim, basic_conf.rgb_means, basic_conf.rgb_std, basic_conf.augment_ratio
     module_cfg = getattr(basic_conf, "dimension_%d"%(int(shape)))
 
-    resume_net_path = 'workspace/v1/refineDet-model-210.pth'
-    # resume_net_path = 'workspace/v2/refineDet-model-160.pth'
+    # resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/v1/refineDet-model-50.pth'
+    resume_net_path = 'workspace/v2/refineDet-model-280.pth'
     # resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/refinedet_vgg_0516/Refine_vgg_COCO_epoches_250.pth'
 
     net = build_net(int(shape), num_classes, use_refine=True)

@@ -37,7 +37,7 @@ CUDA_VISIBLE_DEVICES=1,2 python refinedet_train_test.py --dataset COCO --gpu_ids
 
 CUDA_VISIBLE_DEVICES=2,3 python refinedet_train.py --dataset COCO --gpu_ids 0 1 --cuda --lr 0.05
 
-CUDA_VISIBLE_DEVICES=1 python refinedet_train.py --dataset COCO --gpu_ids 0  --cuda --lr 0.05
+CUDA_VISIBLE_DEVICES=1 python refinedet_train.py --dataset COCO --gpu_ids 0 --cuda --lr 0.05
 
 #### 2018.6.8
 
@@ -108,6 +108,35 @@ Wrote COCO eval results to: workspace/val-v2/detection_results.pkl
 
 train coco :
 CUDA_VISIBLE_DEVICES=6,7 python refinedet_train.py --dataset COCO --gpu_ids 0 1 --cuda --batch_size 64 --workspace /mnt/ckpt/pytorchSSD/Refine_vgg_320/v1 --num_workers 8
+
+#### 2018.6.13
+
+CUDA_VISIBLE_DEVICES=5 python refinedet_val.py --dataset COCO --gpu_ids 0 --cuda
+
+config.coco.train_sets = 'person_train2017'
+config.coco.val_sets = 'person_val2017'
+config.coco.num_classes = 2
+resume_net_path = 'workspace/v2/refineDet-model-220.pth'
+
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.372
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.685
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.369
+
+#### 2018.6.13
+
+CUDA_VISIBLE_DEVICES=5 python refinedet_val.py --dataset COCO --gpu_ids 0 --cuda
+
+config.coco.train_sets = 'person_train2017'
+config.coco.val_sets = 'person_val2017'
+config.coco.num_classes = 2
+resume_net_path = 'workspace/v2/refineDet-model-280.pth'
+
+Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.376
+Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.687
+Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.376
+
+train person from scratch:
+CUDA_VISIBLE_DEVICES=6,7 python refinedet_train.py --dataset COCO --gpu_ids 0 1 --cuda --batch_size 64 --workspace /mnt/ckpt/pytorchSSD/Refine_vgg_320/scratch-v1 --num_workers 8 --basenet None --lr 0.005
 
 
 ### troubleshoot
