@@ -146,9 +146,9 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
                                            num_workers=num_workers,
                                            collate_fn=detection_collate)
 
-    # optimizer = optim.RMSprop(net.parameters(), lr=base_lr, alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
-    optimizer = optim.SGD(net.parameters(), lr=base_lr, momentum=momentum, weight_decay=weight_decay)
-    scheduler = MultiStepLR(optimizer, milestones=[ i*10 for i in range(1, 30) ], gamma=0.5)
+    optimizer = optim.RMSprop(net.parameters(), lr=base_lr, alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
+    # optimizer = optim.SGD(net.parameters(), lr=base_lr, momentum=momentum, weight_decay=weight_decay)
+    scheduler = MultiStepLR(optimizer, milestones=[ i for i in range(1, 30) ], gamma=0.8)
     for epoch in range(1, max_epoch):
 
         scheduler.step()
@@ -172,9 +172,10 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
             mean_odm_loss_c += odm_loss_c.data[0]
 
             if epoch <= 100:
-                loss = 0.8*arm_loss_l + 0.8*arm_loss_c + 0.2*odm_loss_l + 0.2*odm_loss_c
+                loss = arm_loss_l + arm_loss_c
+                # loss = 0.8*arm_loss_l + 0.8*arm_loss_c + 0.2*odm_loss_l + 0.2*odm_loss_c
             elif epoch > 100 and epoch < 200:
-                loss = 0.5*arm_loss_l + 0.5*arm_loss_c + 0.5*odm_loss_l + 0.5*odm_loss_c
+                loss = odm_loss_l + odm_loss_c
             else:
                 loss = 0.2*arm_loss_l + 0.2*arm_loss_c + 0.8*odm_loss_l + 0.8*odm_loss_c
 

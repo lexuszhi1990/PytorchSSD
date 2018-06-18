@@ -122,7 +122,7 @@ resume_net_path = 'workspace/v2/refineDet-model-220.pth'
  Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.685
  Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.369
 
-#### 2018.6.13
+#### 2018.6.14
 
 CUDA_VISIBLE_DEVICES=5 python refinedet_val.py --dataset COCO --gpu_ids 0 --cuda
 
@@ -137,6 +137,12 @@ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.376
 
 train person from scratch:
 CUDA_VISIBLE_DEVICES=6,7 python refinedet_train.py --dataset COCO --gpu_ids 0 1 --cuda --batch_size 64 --workspace /mnt/ckpt/pytorchSSD/Refine_vgg_320/scratch-v1 --num_workers 8 --basenet None --lr 0.005
+不收敛。
+
+#### 2018.6.15
+
+CUDA_VISIBLE_DEVICES=6,7 python refinedet_train.py --dataset COCO --gpu_ids 0 1 --cuda --batch_size 64 --workspace /mnt/ckpt/pytorchSSD/Refine_vgg_320/scratch-v2 --num_workers 8 --basenet None --lr 0.0005
+
 
 
 ### troubleshoot
