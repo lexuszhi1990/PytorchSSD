@@ -24,7 +24,7 @@ from src.config import config
 from src.data.data_augment import detection_collate, BaseTransform, preproc
 from src.data.coco import COCODet
 from src.data.voc import VOCDetection, AnnotationTransform
-from src.loss import RefineMultiBoxLoss
+from src.loss import RefineMultiBoxLoss, MultiBoxLoss
 from src.detection import Detect
 from src.prior_box import PriorBox
 from src.utils import str2bool, setup_logger
@@ -38,7 +38,7 @@ parser = argparse.ArgumentParser(
     description='Refined SSD train')
 parser.add_argument('--workspace', default='./workspace')
 parser.add_argument('--shape', default='320', help='320 or 512 input size.')
-parser.add_argument('--dataset', default='COCO', help='VOC or COCO dataset')
+parser.add_argument('--dataset', default='coco', help='VOC or COCO dataset')
 parser.add_argument('--batch_size', default=32, type=int, help='Batch size for training')
 parser.add_argument('--cuda', action="store_true", default=False, help='Use cuda to train model')
 parser.add_argument('--gpu_ids', nargs='+', default=[], help='gpu id')
@@ -88,6 +88,7 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
         def xavier(param):
             init.xavier_uniform(param)
 
+        # initialize newly added layers' weights with kaiming_normal method
         def weights_init(m):
             for key in m.state_dict():
                 if key.split('.')[-1] == 'weight':
@@ -99,14 +100,7 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
                     m.state_dict()[key][...] = 0
 
         logging.info('Initializing weights...')
-        # initialize newly added layers' weights with kaiming_normal method
-        if Path(basenet).exists():
-            base_weights = torch.load(basenet)
-            logging.info('Loading base network...')
-            net.base.load_state_dict(base_weights)
-        else:
-            net.base.initialize_weights()
-
+        net.base.initialize_weights()
         net.appended_layer.apply(weights_init)
         net.trans_layers.apply(weights_init)
         net.up_layers.apply(weights_init)
@@ -142,6 +136,7 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
     log_interval = 50
     arm_criterion = RefineMultiBoxLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
     odm_criterion = RefineMultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
+    criterion = MultiBoxLoss(num_classes, 0.5, True, 0, True, 3, 0.5, False)
     logging.info('Loading datasets...')
     train_dataset_loader = data.DataLoader(train_dataset, batch_size,
                                            shuffle=True,
@@ -164,22 +159,17 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
                 targets = [Variable(anno, volatile=True) for anno in targets]
 
             timer.tic()
-            arm_loc, arm_conf, odm_loc, odm_conf = net(images)
+            odm_loc, odm_conf = net(images)
             timer.toc()
-            arm_loss_l, arm_loss_c = arm_criterion((arm_loc, arm_conf), priors, targets)
-            odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets, (arm_loc, arm_conf), False)
-            mean_arm_loss_l += arm_loss_l.data[0]
-            mean_arm_loss_c += arm_loss_c.data[0]
+            # odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets)
+            odm_loss_l, odm_loss_c = criterion((odm_loc, odm_conf), priors, targets)
+
+            mean_arm_loss_c = 0
+            mean_arm_loss_l = 0
             mean_odm_loss_l += odm_loss_l.data[0]
             mean_odm_loss_c += odm_loss_c.data[0]
 
-            if epoch <= 100:
-                loss = arm_loss_l + arm_loss_c
-                # loss = 0.8*arm_loss_l + 0.8*arm_loss_c + 0.2*odm_loss_l + 0.2*odm_loss_c
-            elif epoch > 100 and epoch < 200:
-                loss = odm_loss_l + odm_loss_c
-            else:
-                loss = 0.2*arm_loss_l + 0.2*arm_loss_c + 0.8*odm_loss_l + 0.8*odm_loss_c
+            loss = odm_loss_l + odm_loss_c
 
             optimizer.zero_grad()
             loss.backward()
@@ -206,7 +196,7 @@ if __name__ == '__main__':
     workspace = args.workspace
     batch_size = args.batch_size
     shape = args.shape
-    dataset = args.dataset
+    dataset = args.dataset.upper()
     base_lr = args.lr
     warm_epoch = args.warm_epoch
     max_epoch = args.max_epoch

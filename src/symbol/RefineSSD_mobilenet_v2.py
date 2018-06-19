@@ -146,7 +146,7 @@ class RefineSSDMobileNet(nn.Module):
         self.num_classes = num_classes
         self.shape = shape
         self.base_mbox = 3
-        self.base_channel_num = 256
+        self.base_channel_num = 64
         self.use_refine = use_refine
 
         self.base = MobileNetV2Base(width_mult=width_mult)
@@ -180,7 +180,7 @@ class RefineSSDMobileNet(nn.Module):
         self.appended_layer = nn.Sequential(
                 nn.Conv2d(320, 512, kernel_size=1, stride=1, padding=0),
                 nn.ReLU6(inplace=True),
-                nn.Conv2d(512, 256, kernel_size=3, stride=2, padding=1),
+                nn.Conv2d(512, self.base_channel_num, kernel_size=3, stride=2, padding=1),
                 nn.ReLU6(inplace=True)
             )
         self.trans_layers = nn.ModuleList([
@@ -265,10 +265,9 @@ class RefineSSDMobileNet(nn.Module):
 
         output = (
             obm_loc.view(obm_loc.size(0), -1, 4),  # loc preds
-            nn.Softmax()(obm_conf.view(-1, self.num_classes)),  # conf preds
+            obm_conf.view(obm_conf.size(0), -1, self.num_classes)
+            # nn.Softmax()(obm_conf.view(-1, self.num_classes)),  # conf preds
+            # nn.Softmax()(obm_conf.view(obm_conf.size(0), -1, self.num_classes))
         )
 
         return output
-
-
-
