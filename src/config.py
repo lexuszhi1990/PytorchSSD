@@ -16,7 +16,7 @@ config.voc.val_sets = [('2012', 'val')]
 config.voc.base_stepvalues = [120, 150, 200]
 config.voc.img_dim = 320
 config.voc.rgb_std = (1,1,1)
-config.voc.rgb_means = (0, 0, 0)
+config.voc.rgb_means = (104,117,123)
 config.voc.augment_ratio = 0.2
 config.voc.num_classes = 21
 

@@ -143,7 +143,15 @@ CUDA_VISIBLE_DEVICES=6,7 python refinedet_train.py --dataset COCO --gpu_ids 0 1 
 
 CUDA_VISIBLE_DEVICES=6,7 python refinedet_train.py --dataset COCO --gpu_ids 0 1 --cuda --batch_size 64 --workspace /mnt/ckpt/pytorchSSD/Refine_vgg_320/scratch-v2 --num_workers 8 --basenet None --lr 0.0005
 
+不收敛。
 
+#### 2018.6.19
+
+177 machine:
+`CUDA_VISIBLE_DEVICES=6 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 --cuda --batch_size 64 --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/scratch-v1 --num_workers 4 --basenet None --lr 0.0001`
+
+mac:
+`python refinedet_mobile_train.py --dataset voc --workspace ./workspace/v1 --num_workers 2 --batch_size 2`
 
 ### troubleshoot
 
