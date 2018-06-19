@@ -192,6 +192,10 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
 
 if __name__ == '__main__':
 
+    # v2 = Variable(torch.randn(1, 3, 320, 320), requires_grad=True)
+    # model = RefineSSDMobileNet(shape=320, num_classes=2, use_refine=True)
+    # y = model(v2)
+
     args = parser.parse_args()
     workspace = args.workspace
     batch_size = args.batch_size
