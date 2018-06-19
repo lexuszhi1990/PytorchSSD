@@ -178,6 +178,8 @@ class RefineSSD(nn.Module):
             x = F.relu(l(F.relu(u(x) + t, inplace=True)), inplace=True)
             obm_sources.append(x)
         obm_sources.reverse()
+        import pdb
+        pdb.set_trace()
         for (x, l, c) in zip(obm_sources, self.odm_loc, self.odm_conf):
             obm_loc_list.append(l(x).permute(0, 2, 3, 1).contiguous())
             obm_conf_list.append(c(x).permute(0, 2, 3, 1).contiguous())

@@ -241,6 +241,8 @@ class preproc(object):
         labels_t = np.expand_dims(labels_t, 1)
         targets_t = np.hstack((boxes_t, labels_t))
 
+        import pdb
+        pdb.set_trace()
         return torch.from_numpy(image_t), targets_t
 
 
