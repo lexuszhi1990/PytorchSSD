@@ -89,8 +89,6 @@ class RefineMultiBoxLoss(nn.Module):
         else:
             pos = conf_t > 0
 
-        import pdb
-        pdb.set_trace()
         # Localization Loss (Smooth L1)
         # Shape: [batch,num_priors,4]
         pos_idx = pos.unsqueeze(pos.dim()).expand_as(loc_data)

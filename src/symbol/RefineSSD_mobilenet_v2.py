@@ -243,18 +243,18 @@ class RefineSSDMobileNet(nn.Module):
         base_output, arm_sources = self.base(x, [4, 7, 14])
         output = self.appended_layer(base_output)
         arm_sources.append(output)
-        print([x.shape for x in arm_sources])
+        # print([x.shape for x in arm_sources])
 
         for (a_s, t_l) in zip(arm_sources, self.trans_layers):
             trans_layer_list.append(t_l(a_s))
         trans_layer_list.reverse()
+        # print([x.shape for x in trans_layer_list])
 
-        print([x.shape for x in trans_layer_list])
         for (t_l, u_l, l_l) in zip(trans_layer_list, self.up_layers, self.latent_layrs):
             output = F.relu6(l_l(F.relu6(u_l(output) + t_l, inplace=True)), inplace=True)
             obm_sources.append(output)
+        # print([x.shape for x in obm_sources])
 
-        print([x.shape for x in obm_sources])
         obm_sources.reverse()
         for (x, op_loc, op_cls) in zip(obm_sources, self.odm_loc, self.odm_conf):
             obm_loc_list.append(op_loc(x).permute(0, 2, 3, 1).contiguous())
@@ -265,8 +265,8 @@ class RefineSSDMobileNet(nn.Module):
         output = (
             obm_loc.view(obm_loc.size(0), -1, 4),  # loc preds
             obm_conf.view(obm_conf.size(0), -1, self.num_classes)
-            # nn.Softmax()(obm_conf.view(-1, self.num_classes)),  # conf preds
             # nn.Softmax()(obm_conf.view(obm_conf.size(0), -1, self.num_classes))
+            # nn.Softmax()(obm_conf.view(-1, self.num_classes)),  # conf preds
         )
 
         return output

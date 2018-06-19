@@ -136,7 +136,7 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
     log_interval = 50
     arm_criterion = RefineMultiBoxLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
     odm_criterion = RefineMultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
-    criterion = MultiBoxLoss(num_classes, 0.5, True, 0, True, 3, 0.5, False)
+    criterion = MultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
     logging.info('Loading datasets...')
     train_dataset_loader = data.DataLoader(train_dataset, batch_size,
                                            shuffle=True,
