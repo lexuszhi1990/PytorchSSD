@@ -84,6 +84,7 @@ def val(net, detector, priors, testset, num_classes, transform, save_folder, ckp
         x = Variable(transform(img).unsqueeze(0), volatile=True)
         if enable_cuda:
             x = x.cuda()
+        basic_scale = [img.shape[1], img.shape[0], img.shape[1], img.shape[0]]
 
         _t['im_detect'].tic()
         out = net(x=x, inference=True)  # forward pass
@@ -91,7 +92,7 @@ def val(net, detector, priors, testset, num_classes, transform, save_folder, ckp
 
         _t['misc'].tic()
         arm_loc, arm_conf, odm_loc, odm_conf = out
-        output = detector.forward((odm_loc, odm_conf), priors, (arm_loc,arm_conf))
+        output = detector.forward((odm_loc, odm_conf), priors.data, (arm_loc, arm_conf))
         output_np = output.cpu().numpy()
         nms_time = _t['misc'].toc()
 

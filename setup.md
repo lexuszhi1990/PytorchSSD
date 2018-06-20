@@ -158,6 +158,8 @@ mac:
 
 #### 2018.6.20
 
+CUDA_VISIBLE_DEVICES=5 python refinedet_val.py --dataset COCO --gpu_ids 0 --cuda
+
 CUDA_VISIBLE_DEVICES=5 python refinedet_mobile_val.py --dataset COCO --gpu_ids 0 --cuda --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/scratch-v1/refineDet-model-60.pth
 
 ### troubleshoot
