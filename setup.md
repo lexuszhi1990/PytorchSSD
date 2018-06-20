@@ -124,7 +124,7 @@ resume_net_path = 'workspace/v2/refineDet-model-220.pth'
 
 #### 2018.6.14
 
-CUDA_VISIBLE_DEVICES=5 python refinedet_val.py --dataset COCO --gpu_ids 0 --cuda
+CUDA_VISIBLE_DEVICES=7 python refinedet_val.py --dataset COCO --gpu_ids 0 --cuda
 
 config.coco.train_sets = 'person_train2017'
 config.coco.val_sets = 'person_val2017'

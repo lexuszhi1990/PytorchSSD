@@ -66,7 +66,8 @@ def val(net, detector, priors, testset, num_classes, transform, save_folder, ckp
 
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
-    if os.path.exists(ckpt_path):
+
+    if ckpt_path is not None and os.path.exists(ckpt_path):
         net = load_weights(net, ckpt_path)
 
     # dump predictions and assoc. ground truth to text file for now

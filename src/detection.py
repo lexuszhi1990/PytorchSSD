@@ -29,7 +29,6 @@ class Detect(Function):
             prior_data: (tensor) Prior boxes and variances from priorbox layers
                 Shape: [1,num_priors,4]
         """
-
         loc, conf = predictions
         loc_data = loc.data
         conf_data = conf.data
@@ -50,7 +49,6 @@ class Detect(Function):
         if num == 1:
             # size batch x num_classes x num_priors
             conf_preds = conf_data.unsqueeze(0)
-
         else:
             conf_preds = conf_data.view(num, self.num_priors,
                                         self.num_classes)

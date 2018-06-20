@@ -150,17 +150,14 @@ def train(workspace, train_dataset, val_dataset, val_trainsform, module_cfg, bat
             timer.toc()
             # odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets)
             odm_loss_l, odm_loss_c = criterion((odm_loc, odm_conf), priors, targets)
-
+            optimizer.zero_grad()
+            loss = odm_loss_l + odm_loss_c
+            loss.backward()
+            optimizer.step()
             mean_arm_loss_c = 0
             mean_arm_loss_l = 0
             mean_odm_loss_l += odm_loss_l.data[0]
             mean_odm_loss_c += odm_loss_c.data[0]
-
-            loss = odm_loss_l + odm_loss_c
-
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
 
             if iteration % log_interval == 0:
                 logging.info("[%d/%d] || total_loss: %.4f(mean_arm_loc_loss: %.4f mean_arm_cls_loss: %.4f mean_obm_loc_loss: %.4f mean_obm_cls_loss: %.4f) || Batch time: %.4f sec. || LR: %.6f" % (epoch, iteration, loss, mean_arm_loss_l/log_interval, mean_arm_loss_c/log_interval, mean_odm_loss_l/log_interval, mean_odm_loss_c/log_interval, timer.average_time, optimizer.param_groups[0]['lr']))
@@ -178,7 +175,7 @@ def train(workspace, train_dataset, val_dataset, val_trainsform, module_cfg, bat
             val(net, detector, priors, val_dataset, num_classes, val_trainsform, val_results_path, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005)
             net.train()
 
-    torch.save(net.state_dict(), workspace_path.joinpath("Final-refineDet-%d.pth" %(epoch)))
+    torch.save(net.state_dict(), workspace_path.joinpath("Final-refineDet-%d.pth" %(epoch)).as_posix())
 
 if __name__ == '__main__':
 

@@ -275,7 +275,7 @@ class RefineSSDMobileNet(nn.Module):
                 None,
                 None,
                 obm_loc.view(obm_loc.size(0), -1, 4),  # loc preds
-                nn.Softmax()(obm_conf.view(obm_conf.size(0), -1, self.num_classes))
+                nn.Softmax(-1)(obm_conf.view(obm_conf.size(0), -1, self.num_classes))
             )
 
         else:
