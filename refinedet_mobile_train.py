@@ -53,7 +53,7 @@ parser.add_argument('--save_frequency', default=10, type=int, help='epoch for sa
 parser.add_argument('--jaccard_threshold', default=0.5, type=float, help='Min Jaccard index for matching')
 parser.add_argument('--num_workers', default=4, type=int, help='Number of workers used in dataloading')
 parser.add_argument('--visdom', default=False, type=str2bool, help='Use visdom to for loss visualization')
-parser.add_argument('--basenet', default='./weights/pretrained/vgg16_reducedfc.pth', help='pretrained base model')
+parser.add_argument('--basenet', default='None', help='pretrained base model')
 parser.add_argument('--prefix', default='refinedet_model', type=str, help='prefix for saved module name')
 
 parser.add_argument('--warm_epoch', default=1,

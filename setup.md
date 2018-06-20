@@ -9,8 +9,10 @@ docker run --network host --ipc host -v /home/david/fashionAI/PytorchSSD:/app -v
 local dev:
 docker run --name py-ssd --network host --ipc host -v /Users/david/repo/detection/PytorchSSD:/app -v /Users/david/mnt/data/VOCdevkit:/mnt/dataset/voc2012 -it --rm floydhub/pytorch:0.3.1-py3.30 bash
 
-set nms:
+on work-station:
+docker run --name py-ssd --network host --ipc host -v /mnt/workspace/david/PytorchSSD:/app -v /mnt/datasets/pascal-voc/VOCdevkit:/mnt/dataset/VOCdevkit -it --rm floydhub/pytorch:0.3.1-py3.30 bash
 
+set nms:
 ```
 cd src/utils
 python build.py build_ext --inplace
@@ -153,7 +155,7 @@ CUDA_VISIBLE_DEVICES=6,7 python refinedet_train.py --dataset COCO --gpu_ids 0 1 
 `CUDA_VISIBLE_DEVICES=6 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 --cuda --batch_size 64 --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/scratch-v2 --num_workers 4 --basenet None --lr 0.001`
 
 mac:
-`python refinedet_mobile_train.py --dataset voc --workspace ./workspace/v1 --num_workers 2 --batch_size 2`
+`python refinedet_mobile_train.py --dataset voc --workspace ./workspace/v1 --num_workers 2 --batch_size 8`
 
 
 #### 2018.6.20
