@@ -155,6 +155,11 @@ CUDA_VISIBLE_DEVICES=6,7 python refinedet_train.py --dataset COCO --gpu_ids 0 1 
 mac:
 `python refinedet_mobile_train.py --dataset voc --workspace ./workspace/v1 --num_workers 2 --batch_size 2`
 
+
+#### 2018.6.20
+
+CUDA_VISIBLE_DEVICES=5 python refinedet_mobile_val.py --dataset COCO --gpu_ids 0 --cuda --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/scratch-v1/refineDet-model-60.pth
+
 ### troubleshoot
 
 #### pyinn

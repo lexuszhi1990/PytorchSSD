@@ -3,12 +3,11 @@
 import sys
 import os
 import time
+import logging
 import numpy as np
 import argparse
 import pickle
-import logging
 from pathlib import Path
-from collections import OrderedDict
 
 import torch
 import torch.nn as nn
@@ -22,13 +21,15 @@ from torch.autograd import Variable
 from src.config import config
 from src.data.data_augment import detection_collate, BaseTransform, preproc
 from src.data.coco import COCODet
-from src.symbol.RefineSSD_vgg import build_net
 from src.loss import RefineMultiBoxLoss
 from src.detection import Detect
 from src.prior_box import PriorBox
-from src.utils import str2bool
+from src.utils import str2bool, load_weights
 from src.utils.nms_wrapper import nms
 from src.utils.timer import Timer
+
+from src.symbol.RefineSSD_vgg import build_net
+from src.symbol.RefineSSD_mobilenet_v2 import RefineSSDMobileNet
 
 parser = argparse.ArgumentParser(
     description='Refined SSD val')
@@ -60,28 +61,11 @@ parser.add_argument('--retest', default=False, type=bool,
 parser.add_argument('--test_frequency',default=10)
 parser.add_argument('--send_images_to_visdom', type=str2bool, default=False, help='Sample a random image from each 10th batch, send it to visdom after augmentations step')
 
-def load_weights(net, ckpt_path):
-    state_dict = torch.load(ckpt_path)
-    new_state_dict = OrderedDict()
-    for k, v in state_dict.items():
-        head = k[:7]
-        if head == 'module.':
-            name = k[7:] # remove `module.`
-        else:
-            name = k
-        new_state_dict[name] = v
-    net.load_state_dict(new_state_dict)
-
-    logging.info(net)
-    logging.info("load weights from %s" % ckpt_path)
-
-    return net
 
 def val(net, detector, priors, testset, num_classes, transform, save_folder, ckpt_path=None, enable_cuda=False, max_per_image=300, thresh=0.005):
 
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
-
     if os.path.exists(ckpt_path):
         net = load_weights(net, ckpt_path)
 
@@ -100,9 +84,9 @@ def val(net, detector, priors, testset, num_classes, transform, save_folder, ckp
             x = x.cuda()
 
         _t['im_detect'].tic()
-        out = net(x=x, test=True)  # forward pass
+        out = net(x=x, inference=True)  # forward pass
         arm_loc, arm_conf, odm_loc, odm_conf = out
-        boxes, scores = detector.forward((odm_loc,odm_conf), priors, (arm_loc,arm_conf))
+        boxes, scores = detector.forward((odm_loc, odm_conf), priors, (arm_loc,arm_conf))
         detect_time = _t['im_detect'].toc()
         boxes = boxes[0]
         scores=scores[0]
@@ -155,8 +139,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     workspace = args.workspace
     batch_size = args.batch_size
-    shape = args.shape
-    dataset = args.dataset
+    shape = int(args.shape)
+    dataset = args.dataset.upper()
     base_lr = args.lr
     warm_epoch = args.warm_epoch
     max_epoch = args.max_epoch
@@ -187,16 +171,16 @@ if __name__ == '__main__':
     num_classes, img_dim, rgb_means, rgb_std, augment_ratio = basic_conf.num_classes, basic_conf.img_dim, basic_conf.rgb_means, basic_conf.rgb_std, basic_conf.augment_ratio
     module_cfg = getattr(basic_conf, "dimension_%d"%(int(shape)))
 
-    # ckpt_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/v1/refineDet-model-50.pth'
-    # ckpt_path = 'workspace/v2/refineDet-model-280.pth'
-    # ckpt_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/refinedet_vgg_0516/Refine_vgg_COCO_epoches_250.pth'
+    # resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/v1/refineDet-model-50.pth'
+    # resume_net_path = 'workspace/v2/refineDet-model-280.pth'
+    # resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/refinedet_vgg_0516/Refine_vgg_COCO_epoches_250.pth'
+    # resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_mobilenet/scratch-v2/refineDet-model-50.pth'
 
-    net = build_net(int(shape), num_classes, use_refine=True)
-    # net = load_weights(net, ckpt_path)
+    net = RefineSSDMobileNet(shape, num_classes, use_refine=True)
 
     priorbox = PriorBox(module_cfg)
     priors = Variable(priorbox.forward(), volatile=True)
     detector = Detect(num_classes, 0, module_cfg, object_score=0.01)
     val_dataset = COCODet(root_path, val_sets, None)
-    val_trainsform = BaseTransform(net.size, rgb_means, rgb_std, (2, 0, 1))
+    val_trainsform = BaseTransform(shape, rgb_means, rgb_std, (2, 0, 1))
     val(net, detector, priors, val_dataset, num_classes, val_trainsform, workspace, ckpt_path=ckpt_path, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005)

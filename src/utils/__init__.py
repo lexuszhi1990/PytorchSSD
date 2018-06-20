@@ -1,8 +1,44 @@
 # -*- coding: utf-8 -*-
+import logging
 import torch
+import torch.nn.init as init
 from graphviz import Digraph
+from collections import OrderedDict
 
 from .log import setup_logger
+
+
+def load_weights(net, ckpt_path):
+    state_dict = torch.load(ckpt_path)
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        head = k[:7]
+        if head == 'module.':
+            name = k[7:] # remove `module.`
+        else:
+            name = k
+        new_state_dict[name] = v
+    net.load_state_dict(new_state_dict)
+
+    logging.info(net)
+    logging.info("load weights from %s" % ckpt_path)
+
+    return net
+
+def xavier(param):
+    init.xavier_uniform(param)
+
+# initialize newly added layers' weights with kaiming_normal method
+def kaiming_weights_init(m):
+    for key in m.state_dict():
+        if key.split('.')[-1] == 'weight':
+            if 'conv' in key:
+                init.kaiming_normal(m.state_dict()[key], mode='fan_out')
+            if 'bn' in key:
+                m.state_dict()[key][...] = 1
+        elif key.split('.')[-1] == 'bias':
+            m.state_dict()[key][...] = 0
+
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")

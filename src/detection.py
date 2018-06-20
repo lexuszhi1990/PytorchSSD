@@ -19,7 +19,7 @@ class Detect(Function):
         # Parameters used in nms.
         self.variance = cfg['variance']
 
-    def forward(self, predictions, prior, arm_data=None):
+    def forward(self, predictions, prior, arm_data=(None, None)):
         """
         Args:
             loc_data: (tensor) Loc preds from loc layers
@@ -35,8 +35,8 @@ class Detect(Function):
         conf_data = conf.data
         prior_data = prior.data
         num = loc_data.size(0)  # batch size
-        if arm_data:
-            arm_loc, arm_conf = arm_data
+        arm_loc, arm_conf = arm_data
+        if (arm_loc is not None) or (arm_conf is not None):
             arm_loc_data = arm_loc.data
             arm_conf_data = arm_conf.data
             arm_object_conf = arm_conf_data[:, 1:]
@@ -58,7 +58,7 @@ class Detect(Function):
             self.scores.expand(num, self.num_priors, self.num_classes)
         # Decode predictions into bboxes.
         for i in range(num):
-            if arm_data:
+            if arm_loc:
                 default = decode(arm_loc_data[i], prior_data, self.variance)
                 default = center_size(default)
             else:

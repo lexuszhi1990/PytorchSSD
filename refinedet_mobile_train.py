@@ -14,7 +14,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
-import torch.nn.init as init
 import torch.utils.data as data
 import torchvision.transforms as transforms
 from torch.autograd import Variable
@@ -27,12 +26,13 @@ from src.data.voc import VOCDetection, AnnotationTransform
 from src.loss import RefineMultiBoxLoss, MultiBoxLoss
 from src.detection import Detect
 from src.prior_box import PriorBox
-from src.utils import str2bool, setup_logger
+from src.utils import str2bool, setup_logger, kaiming_weights_init
 from src.utils.nms_wrapper import nms
 from src.utils.timer import Timer
 
 from src.symbol.RefineSSD_vgg import build_net
 from src.symbol.RefineSSD_mobilenet_v2 import RefineSSDMobileNet
+from refinedet_mobile_val import val
 
 parser = argparse.ArgumentParser(
     description='Refined SSD train')
@@ -48,12 +48,13 @@ parser.add_argument('--gamma', default=0.1, type=float, help='Gamma update for S
 parser.add_argument('--weight_decay', default=5e-4, type=float, help='Weight decay for SGD')
 parser.add_argument('--resume', default=False, help='resume net for retraining')
 parser.add_argument('--resume_epoch', default=0, type=int, help='resume iter for retraining')
-parser.add_argument('--max_epoch', default=300, type=int, help='max epoch for retraining')
+parser.add_argument('--max_epoch', default=200, type=int, help='max epoch for retraining')
 parser.add_argument('--save_frequency', default=10, type=int, help='epoch for saving ckpt')
 parser.add_argument('--jaccard_threshold', default=0.5, type=float, help='Min Jaccard index for matching')
 parser.add_argument('--num_workers', default=4, type=int, help='Number of workers used in dataloading')
 parser.add_argument('--visdom', default=False, type=str2bool, help='Use visdom to for loss visualization')
 parser.add_argument('--basenet', default='./weights/pretrained/vgg16_reducedfc.pth', help='pretrained base model')
+parser.add_argument('--prefix', default='refinedet_model', type=str, help='prefix for saved module name')
 
 parser.add_argument('--warm_epoch', default=1,
                     type=int, help='max epoch for retraining')
@@ -63,7 +64,7 @@ parser.add_argument('--retest', default=False, type=bool,
 parser.add_argument('--test_frequency',default=10)
 parser.add_argument('--send_images_to_visdom', type=str2bool, default=False, help='Sample a random image from each 10th batch, send it to visdom after augmentations step')
 
-def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, base_lr, momentum, weight_decay, gamma, gpu_ids, enable_cuda, max_epoch, resume, resume_epoch, num_workers, save_frequency, basenet, enable_visdom):
+def train(workspace, train_dataset, val_dataset, val_trainsform, module_cfg, batch_size, shape, base_lr, momentum, weight_decay, gamma, gpu_ids, enable_cuda, max_epoch, resume, resume_epoch, num_workers, save_frequency, basenet, enable_visdom, prefix='refinedet_model'):
 
     if enable_visdom:
         viz = visdom.Visdom()
@@ -81,34 +82,20 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
     log_file_path = workspace_path.joinpath("train-%s" % (shape))
     setup_logger(log_file_path.as_posix())
 
-    net = RefineSSDMobileNet(320, num_classes, use_refine=True)
+    net = RefineSSDMobileNet(320, num_classes, use_refine=True, base_channel_num=128, width_mult=1)
     logging.info(net)
     if not resume:
-
-        def xavier(param):
-            init.xavier_uniform(param)
-
-        # initialize newly added layers' weights with kaiming_normal method
-        def weights_init(m):
-            for key in m.state_dict():
-                if key.split('.')[-1] == 'weight':
-                    if 'conv' in key:
-                        init.kaiming_normal(m.state_dict()[key], mode='fan_out')
-                    if 'bn' in key:
-                        m.state_dict()[key][...] = 1
-                elif key.split('.')[-1] == 'bias':
-                    m.state_dict()[key][...] = 0
-
         logging.info('Initializing weights...')
-        net.base.initialize_weights()
-        net.appended_layer.apply(weights_init)
-        net.trans_layers.apply(weights_init)
-        net.up_layers.apply(weights_init)
-        net.latent_layrs.apply(weights_init)
-        net.arm_loc.apply(weights_init)
-        net.arm_conf.apply(weights_init)
-        net.odm_loc.apply(weights_init)
-        net.odm_conf.apply(weights_init)
+        net.initialize_base_weights()
+        net.appended_layer.apply(kaiming_weights_init)
+        net.trans_layers.apply(kaiming_weights_init)
+        net.up_layers.apply(kaiming_weights_init)
+        net.latent_layrs.apply(kaiming_weights_init)
+        net.arm_loc.apply(kaiming_weights_init)
+        net.arm_conf.apply(kaiming_weights_init)
+        net.odm_loc.apply(kaiming_weights_init)
+        net.odm_conf.apply(kaiming_weights_init)
+        logging.info('Initializing weights done...')
     else:
         # load resume network
         # resume_path = os.path.join(save_folder,version+'_'+dataset + '_epoches_'+ str(resume_epoch) + '.pth')
@@ -125,6 +112,7 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
                 name = k
             new_state_dict[name] = v
         net.load_state_dict(new_state_dict)
+
     if enable_cuda and len(gpu_ids) > 0:
         net = torch.nn.DataParallel(net, device_ids=gpu_ids)
 
@@ -145,11 +133,10 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
 
     # optimizer = optim.RMSprop(net.parameters(), lr=base_lr, alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
     optimizer = optim.SGD(net.parameters(), lr=base_lr, momentum=momentum, weight_decay=weight_decay)
-    scheduler = MultiStepLR(optimizer, milestones=[ i*5 for i in range(1, 3) ], gamma=0.8)
+    scheduler = MultiStepLR(optimizer, milestones=[ i*8 for i in range(1, max_epoch//8) ], gamma=0.65)
     for epoch in range(1, max_epoch):
-
+        net.train()
         scheduler.step()
-
         for iteration, (images, targets) in enumerate(train_dataset_loader):
             if enable_cuda:
                 images = Variable(images.cuda())
@@ -159,7 +146,7 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
                 targets = [Variable(anno, volatile=True) for anno in targets]
 
             timer.tic()
-            odm_loc, odm_conf = net(images)
+            _, _, odm_loc, odm_conf = net(images)
             timer.toc()
             # odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets)
             odm_loss_l, odm_loss_c = criterion((odm_loc, odm_conf), priors, targets)
@@ -184,9 +171,12 @@ def train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, 
                 mean_arm_loss_l = 0
 
         if epoch % save_frequency == 0:
-            save_ckpt_path = workspace_path.joinpath("refineDet-model-%d.pth" %(epoch))
+            net.eval()
+            save_ckpt_path = workspace_path.joinpath("%s-%d.pth" %(prefix, epoch))
             torch.save(net.state_dict(), save_ckpt_path)
             logging.info("save model to %s " % save_ckpt_path)
+            val(net, detector, priors, val_dataset, num_classes, val_trainsform, val_results_path, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005)
+            net.train()
 
     torch.save(net.state_dict(), workspace_path.joinpath("Final-refineDet-%d.pth" %(epoch)))
 
@@ -213,6 +203,7 @@ if __name__ == '__main__':
     save_frequency = args.save_frequency
     basenet = args.basenet
     enable_visdom = args.visdom
+    prefix = args.prefix
     gpu_ids = [int(i) for i in args.gpu_ids]
     enable_cuda = args.cuda and torch.cuda.is_available() and len(gpu_ids) > 0
     if enable_cuda:
@@ -229,6 +220,7 @@ if __name__ == '__main__':
     root_path, train_sets, val_sets = basic_conf.root_path,  basic_conf.train_sets, basic_conf.val_sets
     num_classes, img_dim, rgb_means, rgb_std, augment_ratio = basic_conf.num_classes, basic_conf.img_dim, basic_conf.rgb_means, basic_conf.rgb_std, basic_conf.augment_ratio
     module_cfg = getattr(basic_conf, "dimension_%d"%(int(shape)))
+    val_trainsform = BaseTransform(int(shape), rgb_means, rgb_std, (2, 0, 1))
 
     if dataset == "VOC":
         train_dataset = VOCDetection(root_path, train_sets, preproc(img_dim, rgb_means, rgb_std, augment_ratio), AnnotationTransform())
@@ -237,4 +229,4 @@ if __name__ == '__main__':
         train_dataset = COCODet(root_path, train_sets, preproc(img_dim, rgb_means, rgb_std, augment_ratio))
         val_dataset = COCODet(root_path, val_sets, None)
 
-    train(workspace, train_dataset, val_dataset, module_cfg, batch_size, shape, base_lr, momentum, weight_decay, gamma, gpu_ids, enable_cuda, max_epoch, resume, resume_epoch, num_workers, save_frequency, basenet, enable_visdom)
+    train(workspace, train_dataset, val_dataset, val_trainsform, module_cfg, batch_size, shape, base_lr, momentum, weight_decay, gamma, gpu_ids, enable_cuda, max_epoch, resume, resume_epoch, num_workers, save_frequency, basenet, enable_visdom, prefix=prefix)

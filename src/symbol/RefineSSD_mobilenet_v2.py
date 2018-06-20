@@ -2,15 +2,15 @@
 
 import os
 import math
+import logging
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from src.loss import L2Norm
+from src.utils import kaiming_weights_init, xavier
 
-
-
-def build_mobile_net_v2(first_channel_num=32, data_dim=3, width_mult=1., n_class=81):
+def build_mobile_net_v2(width_mult=1., data_dim=3, first_channel_num=32):
 
     interverted_residual_setting = [
         # t, c, n, s
@@ -40,7 +40,6 @@ def build_mobile_net_v2(first_channel_num=32, data_dim=3, width_mult=1., n_class
     return features
 
 
-
 def conv_bn(inp, oup, stride):
     return nn.Sequential(
         nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
@@ -67,15 +66,15 @@ class InvertedResidual(nn.Module):
 
         self.conv = nn.Sequential(
             # pw
-            nn.Conv2d(inp, inp * expand_ratio, 1, 1, 0, bias=False),
+            nn.Conv2d(inp, inp * expand_ratio, 1, 1, 0, bias=True),
             nn.BatchNorm2d(inp * expand_ratio),
             nn.ReLU6(inplace=True),
             # dw
-            nn.Conv2d(inp * expand_ratio, inp * expand_ratio, 3, stride, 1, groups=inp * expand_ratio, bias=False),
+            nn.Conv2d(inp * expand_ratio, inp * expand_ratio, 3, stride, 1, groups=inp * expand_ratio, bias=True),
             nn.BatchNorm2d(inp * expand_ratio),
             nn.ReLU6(inplace=True),
             # pw-linear
-            nn.Conv2d(inp * expand_ratio, oup, 1, 1, 0, bias=False),
+            nn.Conv2d(inp * expand_ratio, oup, 1, 1, 0, bias=True),
             nn.BatchNorm2d(oup),
         )
 
@@ -141,15 +140,16 @@ class MobileNetV2Base(nn.Module):
 
 
 class RefineSSDMobileNet(nn.Module):
-    def __init__(self, shape, num_classes, use_refine=True, width_mult=1.):
+    def __init__(self, shape, num_classes, use_refine=True, width_mult=1., base_channel_num=128):
         super(RefineSSDMobileNet, self).__init__()
         self.num_classes = num_classes
         self.shape = shape
         self.base_mbox = 3
-        self.base_channel_num = 256
+        self.base_channel_num = base_channel_num
         self.use_refine = use_refine
 
-        self.base = MobileNetV2Base(width_mult=width_mult)
+        # self.base = MobileNetV2Base(width_mult=width_mult)
+        self.base = nn.ModuleList(build_mobile_net_v2(width_mult=width_mult))
 
         self.arm_loc = nn.ModuleList([
                 nn.Conv2d(512, 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
@@ -214,7 +214,7 @@ class RefineSSDMobileNet(nn.Module):
             ])
 
     def initialize_base_weights(self):
-        for sq in self.base.mudules():
+        for sq in self.base.modules():
             for m in sq.modules():
                 if isinstance(m, nn.Conv2d):
                     n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
@@ -229,8 +229,16 @@ class RefineSSDMobileNet(nn.Module):
                     m.weight.data.normal_(0, 0.01)
                     m.bias.data.zero_()
 
+    def base_forward(self, x, steps=[]):
+        arm_sources = []
+        for k in range(len(self.base)):
+            x = self.base[k](x)
+            if k in steps:
+                arm_sources.append(x)
 
-    def forward(self, x):
+        return x, arm_sources
+
+    def forward(self, x, inference=False):
         arm_sources = list()
         arm_loc_list = list()
         arm_conf_list = list()
@@ -240,7 +248,7 @@ class RefineSSDMobileNet(nn.Module):
         trans_layer_list = list()
 
         # 1, 2, 4, 7, 11, 14, 17,
-        base_output, arm_sources = self.base(x, [4, 7, 14])
+        base_output, arm_sources = self.base_forward(x, [4, 7, 14])
         output = self.appended_layer(base_output)
         arm_sources.append(output)
         # print([x.shape for x in arm_sources])
@@ -262,11 +270,20 @@ class RefineSSDMobileNet(nn.Module):
         obm_loc = torch.cat([o.view(o.size(0), -1) for o in obm_loc_list], 1)
         obm_conf = torch.cat([o.view(o.size(0), -1) for o in obm_conf_list], 1)
 
-        output = (
-            obm_loc.view(obm_loc.size(0), -1, 4),  # loc preds
-            obm_conf.view(obm_conf.size(0), -1, self.num_classes)
-            # nn.Softmax()(obm_conf.view(obm_conf.size(0), -1, self.num_classes))
-            # nn.Softmax()(obm_conf.view(-1, self.num_classes)),  # conf preds
-        )
+        if inference:
+            output = (
+                None,
+                None,
+                obm_loc.view(obm_loc.size(0), -1, 4),  # loc preds
+                nn.Softmax()(obm_conf.view(obm_conf.size(0), -1, self.num_classes))
+            )
+
+        else:
+            output = (
+                None,
+                None,
+                obm_loc.view(obm_loc.size(0), -1, 4),  # loc preds
+                obm_conf.view(obm_conf.size(0), -1, self.num_classes)
+            )
 
         return output
