@@ -99,7 +99,6 @@ def val(net, detector, priors, testset, num_classes, transform, save_folder, ckp
         x = Variable(transform(img).unsqueeze(0), volatile=True)
         if enable_cuda:
             x = x.cuda()
-        scale = torch.Tensor([img.shape[1], img.shape[0], img.shape[1], img.shape[0]])
         basic_scale = [img.shape[1], img.shape[0], img.shape[1], img.shape[0]]
 
         _t['im_detect'].tic()
@@ -112,11 +111,12 @@ def val(net, detector, priors, testset, num_classes, transform, save_folder, ckp
         output_np = output.cpu().numpy()
         nms_time = _t['misc'].toc()
 
-        if len(output_np) == 0:
-            continue
-
         for j in range(1, num_classes):
             results = output_np[output_np[:, 0] == j]
+            if len(results) == 0:
+                all_boxes[j][i] = np.empty([0, 5], dtype=np.float32)
+                continue
+
             scores = results[:, 1]
             boxes = results[:, 2:6] * basic_scale
             c_dets = np.hstack((boxes, scores[:, np.newaxis])).astype(np.float32, copy=False)
