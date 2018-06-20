@@ -36,7 +36,6 @@ class Detector(Function):
                 shape: [score: float*4, score: float*1]
         """
 
-
         loc, conf = pred_data
         loc_data = loc.data
         conf_data = conf.data

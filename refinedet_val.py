@@ -112,7 +112,6 @@ def val(net, detector, priors, testset, num_classes, transform, save_folder, ckp
         output_np = output.cpu().numpy()
         nms_time = _t['misc'].toc()
 
-
         if len(output_np) == 0:
             continue
 
