@@ -99,18 +99,17 @@ class RefineSSDMobileNet(nn.Module):
 
         self.base = nn.ModuleList(build_mobile_net_v2(width_mult=width_mult))
         self.arm_loc = nn.ModuleList([
-                nn.Conv2d(512, 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
-                nn.Conv2d(512, 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
-                nn.Conv2d(1024, 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
-                nn.Conv2d(512, 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                nn.Conv2d(self.base_channel_list[0], 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                nn.Conv2d(self.base_channel_list[1], 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                nn.Conv2d(self.base_channel_list[2], 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                nn.Conv2d(self.base_channel_list[3]*2, 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
             ])
         self.arm_conf = nn.ModuleList([
-                nn.Conv2d(512, 2*self.base_mbox, kernel_size=3, stride=1, padding=1), \
-                nn.Conv2d(512, 2*self.base_mbox, kernel_size=3, stride=1, padding=1), \
-                nn.Conv2d(1024, 2*self.base_mbox, kernel_size=3, stride=1, padding=1), \
-                nn.Conv2d(512, 2*self.base_mbox, kernel_size=3, stride=1, padding=1), \
+                nn.Conv2d(self.base_channel_list[0], 2*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                nn.Conv2d(self.base_channel_list[1], 2*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                nn.Conv2d(self.base_channel_list[2], 2*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                nn.Conv2d(self.base_channel_list[3]*2, 2*self.base_mbox, kernel_size=3, stride=1, padding=1),
             ])
-
         self.odm_loc = nn.ModuleList([
                 nn.Conv2d(self.base_channel_num, 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
                 nn.Conv2d(self.base_channel_num, 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
@@ -209,12 +208,20 @@ class RefineSSDMobileNet(nn.Module):
         obm_conf_list = list()
         obm_sources = list()
         trans_layer_list = list()
+        arm_loc, arm_conf, obm_loc, obm_conf = None, None, None, None
 
         # 1, 2, 4, 7, 11, 14, 17,
         base_output, arm_sources = self.base_forward(x, [4, 7, 14])
         output = self.appended_layer(base_output)
         arm_sources.append(output)
         # logging.info([x.shape for x in arm_sources])
+
+        if self.use_refine:
+            for (a_s, a_l, a_c) in zip(arm_sources, self.arm_loc, self.arm_conf):
+                arm_loc_list.append(a_l(a_s).permute(0, 2, 3, 1).contiguous())
+                arm_conf_list.append(a_c(a_s).permute(0, 2, 3, 1).contiguous())
+            arm_loc = torch.cat([o.view(o.size(0), -1) for o in arm_loc_list], 1)
+            arm_conf = torch.cat([o.view(o.size(0), -1) for o in arm_conf_list], 1)
 
         for (a_s, t_l) in zip(arm_sources, self.trans_layers):
             trans_layer_list.append(t_l(a_s))
@@ -233,20 +240,14 @@ class RefineSSDMobileNet(nn.Module):
         obm_loc = torch.cat([o.view(o.size(0), -1) for o in obm_loc_list], 1)
         obm_conf = torch.cat([o.view(o.size(0), -1) for o in obm_conf_list], 1)
 
+        obm_loc = obm_loc.view(obm_loc.size(0), -1, 4)
+        obm_conf = obm_conf.view(obm_conf.size(0), -1, self.num_classes)
+        if self.use_refine:
+            arm_loc = arm_loc.view(arm_loc.size(0), -1, 4),  # loc preds
+            arm_conf = arm_conf.view(-1, 2)
+
         if inference:
-            output = (
-                None,
-                None,
-                obm_loc.view(obm_loc.size(0), -1, 4),  # loc preds
-                nn.Softmax(-1)(obm_conf.view(obm_conf.size(0), -1, self.num_classes))
-            )
+            arm_conf = nn.Softmax(-1)(arm_conf)
+            obm_conf = nn.Softmax(-1)(obm_conf)
 
-        else:
-            output = (
-                None,
-                None,
-                obm_loc.view(obm_loc.size(0), -1, 4),  # loc preds
-                obm_conf.view(obm_conf.size(0), -1, self.num_classes)
-            )
-
-        return output
+        return (arm_loc, arm_conf, obm_loc, obm_conf)

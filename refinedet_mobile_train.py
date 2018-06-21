@@ -113,8 +113,11 @@ def train(workspace, train_dataset, val_dataset, val_trainsform, priors, detecto
 if __name__ == '__main__':
 
     # v2 = Variable(torch.randn(1, 3, 320, 320), requires_grad=True)
-    # model = RefineSSDMobileNet(shape=320, num_classes=2, use_refine=True)
+    # model = RefineSSDMobileNet(shape=320, num_classes=2, base_channel_num=128, width_mult=0.5, use_refine=True)
+    # model.initialize_weights()
     # y = model(v2)
+    # import pdb
+    # pdb.set_trace()
 
     args = get_args()
     workspace = args.workspace
