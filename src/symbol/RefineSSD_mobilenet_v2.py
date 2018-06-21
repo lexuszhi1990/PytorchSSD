@@ -32,7 +32,6 @@ def build_mobile_net_v2(width_mult=1., data_dim=3, first_channel_num=32):
         for i in range(n):
             if i == 0:
                 features.append(InvertedResidual(input_channel, output_channel, s, t))
-                print(len(features)-1)
             else:
                 features.append(InvertedResidual(input_channel, output_channel, 1, t))
             input_channel = output_channel

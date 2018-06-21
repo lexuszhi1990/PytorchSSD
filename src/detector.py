@@ -10,16 +10,16 @@ class Detector(Function):
     confidence score and locations.
     """
 
-    def __init__(self, num_classes, bkg_label=0, top_k=100, conf_thresh=0.50, nms_thresh=0.5, variance=[0.1, 0.2], object_score=0, max_per_image=0, filter_results=True):
+    def __init__(self, num_classes, top_k=200, conf_thresh=0.5, nms_thresh=0.55, variance=[0.1, 0.2], max_per_image=0, bg_label=0, nms_intersection_class=True):
         self.num_classes = num_classes
-        self.bkg_label = bkg_label
-        self.object_score = object_score
+        self.bg_label = bg_label
         self.top_k = top_k
         self.conf_thresh = conf_thresh
         self.nms_thresh = nms_thresh
         self.variance = variance
         self.max_per_image = max_per_image
-        self.filter_results = filter_results
+        # TODO: apply nms for output
+        self.nms_intersection_class = nms_intersection_class
 
     def forward(self, pred_data, prior_data, arm_data=(None, None)):
         """
@@ -71,14 +71,13 @@ class Detector(Function):
                 continue
             decoded_cls_mask = cls_mask.unsqueeze(1).expand_as(decoded_boxes)
             boxes = decoded_boxes[decoded_cls_mask].view(-1, 4)
-            boxes[boxes<0]=0
+            # boxes[boxes<0]=0
             # idx of highest scoring and non-overlapping boxes per class
             ids, count = pytorch_nms(boxes, scores, self.nms_thresh, self.top_k)
             cls_list = torch.Tensor([1 for _ in range(self.top_k)]).unsqueeze(1)
             output[cls_id, :count] = torch.cat((cls_list[:count], scores[ids[:count]].unsqueeze(1), boxes[ids[:count]]), 1)
 
         output = output.contiguous().view(-1, 6)
-        # TODO: apply nms for output
         filter_mask = (output[:, 0] > 0).nonzero()
         if len(filter_mask) > 0:
             return output[filter_mask.squeeze(1)]

@@ -172,7 +172,7 @@ def train(workspace, train_dataset, val_dataset, val_trainsform, module_cfg, bat
             save_ckpt_path = workspace_path.joinpath("%s-%d.pth" %(prefix, epoch))
             torch.save(net.state_dict(), save_ckpt_path)
             logging.info("save model to %s " % save_ckpt_path)
-            val(net, detector, priors, val_dataset, num_classes, val_trainsform, val_results_path, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005)
+            val(net, detector, priors, num_classes, val_dataset, val_trainsform, val_results_path, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005)
             net.train()
 
     torch.save(net.state_dict(), workspace_path.joinpath("Final-refineDet-%d.pth" %(epoch)).as_posix())
