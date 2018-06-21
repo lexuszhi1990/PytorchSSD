@@ -170,9 +170,16 @@ python refinedet_mobile_train.py --dataset voc --workspace ./workspace/v1 --num_
 tag v2:
 person 32%
 
-#### 2018.6.21
+#### 2018.6.22
 
 CUDA_VISIBLE_DEVICES=5 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 --cuda --batch_size 128 --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/scratch-v3 --num_workers 8 --basenet None --lr 0.004
+
+scratch-v2: no arm branch, width 0.5
+scratch-v3: arm branch, width 0.5
+scratch-v4: arm branch, width 0.75
+
+CUDA_VISIBLE_DEVICES=1 python refinedet_mobile_val.py --dataset COCO --gpu_ids 0 --cuda --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/scratch-v2/refinedet_model-70.pth
+
 
 ### troubleshoot
 
