@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from src.utils.box_utils import match, log_sum_exp
+from src.utils.box_utils import match, refine_match, log_sum_exp
 
-class MultiBoxLoss(nn.Module):
+class RefineMultiBoxLoss(nn.Module):
     """SSD Weighted Loss Function
     Compute Targets:
         1) Produce Confidence Target Indices by matching ground truth boxes
@@ -29,8 +29,8 @@ class MultiBoxLoss(nn.Module):
     """
 
 
-    def __init__(self, num_classes, overlap_thresh, neg_pos_ratio, object_score, variance=[0.1,0.2], bg_class_id=0, enable_cuda=False):
-        super(MultiBoxLoss, self).__init__()
+    def __init__(self, num_classes, overlap_thresh, neg_pos_ratio, object_score=0.01, variance=[0.1,0.2], bg_class_id=0, enable_cuda=False, filter_arm_object=False):
+        super(RefineMultiBoxLoss, self).__init__()
 
         self.num_classes = num_classes
         self.overlap_thresh = overlap_thresh
@@ -38,9 +38,10 @@ class MultiBoxLoss(nn.Module):
         self.object_score = object_score
         self.variance = variance
         self.enable_cuda = enable_cuda
+        self.filter_arm_object = filter_arm_object
         self.bg_class_id = bg_class_id
 
-    def forward(self, pred_data, priors_data, gt_data):
+    def forward(self, pred_data, priors_data, gt_data, arm_data=(None, None)):
         """Multibox Loss
         Args:
             pred_data (tuple): A tuple containing loc preds, conf preds,
@@ -54,6 +55,7 @@ class MultiBoxLoss(nn.Module):
         """
 
         pred_loc, pred_score = pred_data
+        arm_loc, arm_conf = arm_data
         num = pred_loc.size(0)
         num_priors = (priors_data.size(0))
 
@@ -63,8 +65,13 @@ class MultiBoxLoss(nn.Module):
         for idx in range(num):
             gt_loc = gt_data[idx][:,:-1].data
             gt_cls = gt_data[idx][:,-1].data
-            target_loc[idx], target_score[idx] = match(self.overlap_thresh, gt_loc, gt_cls, priors_data, self.variance)
-
+            # for arm branch
+            if self.num_classes == 2 and arm_loc is not None:
+                gt_cls = gt_cls > self.bg_class_id
+            if arm_loc is None:
+                target_loc[idx], target_score[idx] = match(self.overlap_thresh, gt_loc, gt_cls, priors_data, self.variance)
+            else:
+                target_loc[idx], target_score[idx] = refine_match(self.overlap_thresh, gt_loc, gt_cls, priors_data, arm_loc[idx].data, self.variance)
         if self.enable_cuda:
             target_loc = target_loc.cuda()
             target_score = target_score.cuda()
@@ -73,6 +80,9 @@ class MultiBoxLoss(nn.Module):
         target_score = Variable(target_score,requires_grad=False)
 
         pos = target_score > 0
+        if arm_conf is not None and self.filter_arm_object:
+            arm_conf_data = arm_conf.data[:,:,1]
+            pos[arm_conf_data <= self.object_score] = 0
         pos_idx = pos.unsqueeze(pos.dim()).expand_as(pred_loc)
 
         # Localization Loss (Smooth L1)

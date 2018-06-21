@@ -220,8 +220,10 @@ class RefineSSDMobileNet(nn.Module):
             for (a_s, a_l, a_c) in zip(arm_sources, self.arm_loc, self.arm_conf):
                 arm_loc_list.append(a_l(a_s).permute(0, 2, 3, 1).contiguous())
                 arm_conf_list.append(a_c(a_s).permute(0, 2, 3, 1).contiguous())
-            arm_loc = torch.cat([o.view(o.size(0), -1) for o in arm_loc_list], 1)
-            arm_conf = torch.cat([o.view(o.size(0), -1) for o in arm_conf_list], 1)
+            arm_loc_temp = torch.cat([o.view(o.size(0), -1) for o in arm_loc_list], 1)
+            arm_conf_temp = torch.cat([o.view(o.size(0), -1) for o in arm_conf_list], 1)
+            arm_loc_result = arm_loc_temp.view(arm_loc_temp.size(0), -1, 4)
+
 
         for (a_s, t_l) in zip(arm_sources, self.trans_layers):
             trans_layer_list.append(t_l(a_s))
@@ -240,14 +242,13 @@ class RefineSSDMobileNet(nn.Module):
         obm_loc = torch.cat([o.view(o.size(0), -1) for o in obm_loc_list], 1)
         obm_conf = torch.cat([o.view(o.size(0), -1) for o in obm_conf_list], 1)
 
-        obm_loc = obm_loc.view(obm_loc.size(0), -1, 4)
-        obm_conf = obm_conf.view(obm_conf.size(0), -1, self.num_classes)
-        if self.use_refine:
-            arm_loc = arm_loc.view(arm_loc.size(0), -1, 4),  # loc preds
-            arm_conf = arm_conf.view(-1, 2)
+        obm_loc_result = obm_loc.view(obm_loc.size(0), -1, 4)
 
         if inference:
-            arm_conf = nn.Softmax(-1)(arm_conf)
-            obm_conf = nn.Softmax(-1)(obm_conf)
+            arm_conf_result = nn.Softmax(-1)(arm_conf_temp.view(-1, 2))
+            obm_conf_result = nn.Softmax(-1)(obm_conf.view(-1, self.num_classes))
+        else:
+            arm_conf_result = arm_conf_temp.view(arm_conf_temp.size(0), -1, 2)
+            obm_conf_result = obm_conf.view(obm_conf.size(0), -1, self.num_classes)
 
-        return (arm_loc, arm_conf, obm_loc, obm_conf)
+        return (arm_loc_result, arm_conf_result, obm_loc_result, obm_conf_result)

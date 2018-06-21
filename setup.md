@@ -152,7 +152,7 @@ CUDA_VISIBLE_DEVICES=6,7 python refinedet_train.py --dataset COCO --gpu_ids 0 1 
 177 machine:
 `CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 --cuda --batch_size 64 --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/scratch-v1 --num_workers 4 --basenet None --lr 0.0001`
 
-`CUDA_VISIBLE_DEVICES=6 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 --cuda --batch_size 64 --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/scratch-v2 --num_workers 4 --basenet None --lr 0.001`
+`CUDA_VISIBLE_DEVICES=3 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 --cuda --batch_size 2 --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/scratch-test --num_workers 4 --basenet None --lr 0.001`
 
 mac:
 `python refinedet_mobile_train.py --dataset voc --workspace ./workspace/v1 --num_workers 2 --batch_size 8`
@@ -166,6 +166,13 @@ CUDA_VISIBLE_DEVICES=5 python refinedet_mobile_val.py --dataset COCO --gpu_ids 0
 
 on ws:
 python refinedet_mobile_train.py --dataset voc --workspace ./workspace/v1 --num_workers 4 --batch_size 8 --lr 0.004
+
+tag v2:
+person 32%
+
+#### 2018.6.21
+
+CUDA_VISIBLE_DEVICES=5 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 --cuda --batch_size 128 --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/scratch-v3 --num_workers 8 --basenet None --lr 0.004
 
 ### troubleshoot
 

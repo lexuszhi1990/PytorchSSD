@@ -59,18 +59,15 @@ def train(workspace, train_dataset, val_dataset, val_trainsform, priors, detecto
 
     timer = Timer()
     mean_odm_loss_c, mean_odm_loss_l, mean_arm_loss_c, mean_arm_loss_l = 0, 0, 0, 0
-    arm_criterion = RefineMultiBoxLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
-    odm_criterion = RefineMultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
-    criterion = MultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
+    arm_criterion = RefineMultiBoxLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, enable_cuda=enable_cuda)
+    odm_criterion = RefineMultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.001, enable_cuda=enable_cuda)
+    criterion = MultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.01, enable_cuda=enable_cuda)
     logging.info('Loading datasets...')
-    train_dataset_loader = data.DataLoader(train_dataset, batch_size,
-                                           shuffle=True,
-                                           num_workers=num_workers,
-                                           collate_fn=detection_collate)
+    train_dataset_loader = data.DataLoader(train_dataset, batch_size, shuffle=True, num_workers=num_workers, collate_fn=detection_collate)
 
     # optimizer = optim.RMSprop(net.parameters(), lr=base_lr, alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
     optimizer = optim.SGD(net.parameters(), lr=base_lr, momentum=momentum, weight_decay=weight_decay)
-    scheduler = MultiStepLR(optimizer, milestones=[ i*8 for i in range(1, max_epoch//8) ], gamma=0.65)
+    scheduler = MultiStepLR(optimizer, milestones=[ i*6 for i in range(1, max_epoch//6) ], gamma=0.65)
     for epoch in range(1, max_epoch):
         net.train()
         scheduler.step()
@@ -83,15 +80,17 @@ def train(workspace, train_dataset, val_dataset, val_trainsform, priors, detecto
                 targets = [Variable(anno, volatile=True) for anno in targets]
 
             timer.tic()
-            _, _, odm_loc, odm_conf = net(images)
+            arm_loc, arm_conf, odm_loc, odm_conf = net(images)
             timer.toc()
-            odm_loss_l, odm_loss_c = criterion((odm_loc, odm_conf), priors, targets)
+
+            arm_loss_l, arm_loss_c = arm_criterion((arm_loc, arm_conf), priors, targets)
+            odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets, (arm_loc, arm_conf))
             optimizer.zero_grad()
-            loss = odm_loss_l + odm_loss_c
+            loss = 0.2 * (arm_loss_l + arm_loss_c) + 0.8 * (odm_loss_l + odm_loss_c)
             loss.backward()
             optimizer.step()
-            mean_arm_loss_c = 0
-            mean_arm_loss_l = 0
+            mean_arm_loss_c += arm_loss_c.data[0]
+            mean_arm_loss_l += arm_loss_l.data[0]
             mean_odm_loss_l += odm_loss_l.data[0]
             mean_odm_loss_c += odm_loss_c.data[0]
 
