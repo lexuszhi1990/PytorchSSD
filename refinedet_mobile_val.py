@@ -116,7 +116,7 @@ if __name__ == '__main__':
     priors = Variable(priorbox.forward(), volatile=True).data
     detector = Detector(num_classes, top_k=top_k, conf_thresh=confidence_thresh, nms_thresh=nms_thresh, variance=module_cfg['variance'])
 
-    net = RefineSSDMobileNet(shape, num_classes, use_refine=True)
+    net = RefineSSDMobileNet(shape, num_classes, base_channel_num=module_cfg['base_channel_num'], width_mult=module_cfg['width_mult'], use_refine=False)
 
     if dataset == "VOC":
         val_dataset = VOCDetection(root_path, val_sets, None, AnnotationTransform())

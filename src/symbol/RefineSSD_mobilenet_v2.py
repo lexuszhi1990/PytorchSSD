@@ -98,18 +98,19 @@ class RefineSSDMobileNet(nn.Module):
         self.base_mbox = 3
 
         self.base = nn.ModuleList(build_mobile_net_v2(width_mult=width_mult))
-        self.arm_loc = nn.ModuleList([
-                nn.Conv2d(self.base_channel_list[0], 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
-                nn.Conv2d(self.base_channel_list[1], 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
-                nn.Conv2d(self.base_channel_list[2], 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
-                nn.Conv2d(self.base_channel_list[3]*2, 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
-            ])
-        self.arm_conf = nn.ModuleList([
-                nn.Conv2d(self.base_channel_list[0], 2*self.base_mbox, kernel_size=3, stride=1, padding=1),
-                nn.Conv2d(self.base_channel_list[1], 2*self.base_mbox, kernel_size=3, stride=1, padding=1),
-                nn.Conv2d(self.base_channel_list[2], 2*self.base_mbox, kernel_size=3, stride=1, padding=1),
-                nn.Conv2d(self.base_channel_list[3]*2, 2*self.base_mbox, kernel_size=3, stride=1, padding=1),
-            ])
+        if self.use_refine:
+            self.arm_loc = nn.ModuleList([
+                    nn.Conv2d(self.base_channel_list[0], 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                    nn.Conv2d(self.base_channel_list[1], 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                    nn.Conv2d(self.base_channel_list[2], 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                    nn.Conv2d(self.base_channel_list[3]*2, 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                ])
+            self.arm_conf = nn.ModuleList([
+                    nn.Conv2d(self.base_channel_list[0], 2*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                    nn.Conv2d(self.base_channel_list[1], 2*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                    nn.Conv2d(self.base_channel_list[2], 2*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                    nn.Conv2d(self.base_channel_list[3]*2, 2*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                ])
         self.odm_loc = nn.ModuleList([
                 nn.Conv2d(self.base_channel_num, 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
                 nn.Conv2d(self.base_channel_num, 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
@@ -223,7 +224,10 @@ class RefineSSDMobileNet(nn.Module):
             arm_loc_temp = torch.cat([o.view(o.size(0), -1) for o in arm_loc_list], 1)
             arm_conf_temp = torch.cat([o.view(o.size(0), -1) for o in arm_conf_list], 1)
             arm_loc_result = arm_loc_temp.view(arm_loc_temp.size(0), -1, 4)
-
+            if inference:
+                arm_conf_result = nn.Softmax(-1)(arm_conf_temp.view(-1, 2))
+            else:
+                arm_conf_result = arm_conf_temp.view(arm_conf_temp.size(0), -1, 2)
 
         for (a_s, t_l) in zip(arm_sources, self.trans_layers):
             trans_layer_list.append(t_l(a_s))
@@ -243,12 +247,9 @@ class RefineSSDMobileNet(nn.Module):
         obm_conf = torch.cat([o.view(o.size(0), -1) for o in obm_conf_list], 1)
 
         obm_loc_result = obm_loc.view(obm_loc.size(0), -1, 4)
-
         if inference:
-            arm_conf_result = nn.Softmax(-1)(arm_conf_temp.view(-1, 2))
             obm_conf_result = nn.Softmax(-1)(obm_conf.view(-1, self.num_classes))
         else:
-            arm_conf_result = arm_conf_temp.view(arm_conf_temp.size(0), -1, 2)
             obm_conf_result = obm_conf.view(obm_conf.size(0), -1, self.num_classes)
 
         return (arm_loc_result, arm_conf_result, obm_loc_result, obm_conf_result)
