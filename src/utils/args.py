@@ -21,15 +21,17 @@ def get_args():
     parser.add_argument('--save_frequency', default=10, type=int, help='epoch for saving ckpt')
     parser.add_argument('--jaccard_threshold', default=0.5, type=float, help='Min Jaccard index for matching')
     parser.add_argument('--num_workers', default=4, type=int, help='Number of workers used in dataloading')
-    parser.add_argument('--basenet', type=str, default='None', help='pretrained base model')
     parser.add_argument('--ckpt_path', type=str, help='pretrained base model')
     parser.add_argument('--prefix', default='refinedet_model', type=str, help='prefix for saved module name')
     parser.add_argument('--visdom', action="store_true", default=False, help='Use visdom to for loss visualization')
 
     # for nms
     parser.add_argument('--top_k', default=200, type=int, help='Number of roi used for nms')
-    parser.add_argument('--nms_thresh', default=0.5, type=int, help='nms threshold')
-    parser.add_argument('--confidence_thresh', default=0.5, type=int, help='confidence threshold for filtering the roi')
+    parser.add_argument('--nms_thresh', default=0.5, type=float, help='nms threshold')
+    parser.add_argument('--confidence_thresh', default=0.5, type=float, help='confidence threshold for filtering the roi')
+
+    # desperate
+    parser.add_argument('--basenet', type=str, default='None', help='pretrained base model')
 
     args = parser.parse_args()
     return args

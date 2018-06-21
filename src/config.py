@@ -165,7 +165,9 @@ config.coco.dimension_320 = {
 
     'clip': True,
 
-    'width_mult': 0.5,
+    'width_mult': 1,
 
     'base_channel_num': 128,
+
+    'use_refine': True
 }

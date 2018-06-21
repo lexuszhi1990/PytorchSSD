@@ -50,7 +50,7 @@ class Detector(Function):
             arm_loc_data = arm_loc.data
             arm_conf_data = arm_conf.data
             arm_object_conf = arm_conf_data[:, 1:]
-            no_object_index = arm_object_conf <= self.object_score
+            no_object_index = arm_object_conf <= 0
             conf_data[no_object_index.expand_as(conf_data)] = 0
 
         conf_preds = conf_data.view(num, num_priors, self.num_classes).transpose(2, 1)
@@ -64,7 +64,7 @@ class Detector(Function):
         decoded_boxes = decode(loc_data[index], default, self.variance)
         conf_scores = conf_preds[index].clone()
 
-        for cls_id in range(1, self.num_classes):
+        for cls_id in range(self.num_classes):
             cls_mask = conf_scores[cls_id].gt(self.conf_thresh)
             scores = conf_scores[cls_id][cls_mask]
             if scores.dim() == 0:
