@@ -40,10 +40,10 @@ class MultiBoxLoss(nn.Module):
         self.enable_cuda = enable_cuda
         self.bg_class_id = bg_class_id
 
-    def forward(self, predictions, priors, targets):
+    def forward(self, pred_data, priors_data, gt_data):
         """Multibox Loss
         Args:
-            predictions (tuple): A tuple containing loc preds, conf preds,
+            pred_data (tuple): A tuple containing loc preds, conf preds,
             and prior boxes from SSD net.
                 conf shape: torch.size(batch_size,num_priors,num_classes)
                 loc shape: torch.size(batch_size,num_priors,4)
@@ -53,23 +53,22 @@ class MultiBoxLoss(nn.Module):
                 shape: [batch_size,num_objs,5] (last idx is the label).
         """
 
-        pred_loc, pred_score = predictions
+        pred_loc, pred_score = pred_data
         num = pred_loc.size(0)
-        num_priors = (priors.size(0))
-        priors_data = priors.data
+        num_priors = (priors_data.size(0))
 
         # match priors (default boxes) and ground truth boxes
         target_loc = torch.Tensor(num, num_priors, 4)
         target_score = torch.LongTensor(num, num_priors)
         for idx in range(num):
-            gt_loc = targets[idx][:,:-1].data
-            gt_cls = targets[idx][:,-1].data
+            gt_loc = gt_data[idx][:,:-1].data
+            gt_cls = gt_data[idx][:,-1].data
             target_loc[idx], target_score[idx] = match(self.overlap_thresh, gt_loc, gt_cls, priors_data, self.variance)
 
         if self.enable_cuda:
             target_loc = target_loc.cuda()
             target_score = target_score.cuda()
-        # wrap targets
+        # wrap gt_data
         target_loc = Variable(target_loc, requires_grad=False)
         target_score = Variable(target_score,requires_grad=False)
 

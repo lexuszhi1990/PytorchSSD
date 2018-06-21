@@ -58,7 +58,7 @@ def val(net, detector, priors, num_classes, val_dataset, transform, save_folder,
 
         _t['misc'].tic()
         arm_loc, arm_conf, odm_loc, odm_conf = out
-        output = detector.forward((odm_loc, odm_conf), priors.data, (arm_loc, arm_conf))
+        output = detector.forward((odm_loc, odm_conf), priors, (arm_loc, arm_conf))
         output_np = output.cpu().numpy()
         nms_time = _t['misc'].toc()
 
@@ -111,11 +111,12 @@ if __name__ == '__main__':
     root_path, val_sets, num_classes, img_dim, rgb_means, rgb_std, augment_ratio = basic_conf.root_path, basic_conf.val_sets, basic_conf.num_classes, basic_conf.img_dim, basic_conf.rgb_means, basic_conf.rgb_std, basic_conf.augment_ratio
 
     module_cfg = getattr(basic_conf, "dimension_%d"%(int(shape)))
-    priorbox = PriorBox(module_cfg)
-    priors = Variable(priorbox.forward(), volatile=True)
-    detector = Detector(num_classes, top_k=top_k, conf_thresh=confidence_thresh, nms_thresh=nms_thresh, variance=module_cfg['variance'])
-    net = RefineSSDMobileNet(shape, num_classes, use_refine=True)
     val_trainsform = BaseTransform(shape, rgb_means, rgb_std, (2, 0, 1))
+    priorbox = PriorBox(module_cfg)
+    priors = Variable(priorbox.forward(), volatile=True).data
+    detector = Detector(num_classes, top_k=top_k, conf_thresh=confidence_thresh, nms_thresh=nms_thresh, variance=module_cfg['variance'])
+
+    net = RefineSSDMobileNet(shape, num_classes, use_refine=True)
 
     if dataset == "VOC":
         val_dataset = VOCDetection(root_path, val_sets, None, AnnotationTransform())

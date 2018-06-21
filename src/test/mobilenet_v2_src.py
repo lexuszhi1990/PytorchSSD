@@ -161,3 +161,58 @@ class MobileNetV2(nn.Module):
                 m.weight.data.normal_(0, 0.01)
                 m.bias.data.zero_()
 
+
+
+class MobileNetV2Base(nn.Module):
+    def __init__(self, width_mult=1., data_dim=3, first_channel_num=32):
+        super(MobileNetV2Base, self).__init__()
+
+        interverted_residual_setting = [
+            # t, c, n, s
+            [1, 16, 1, 1],
+            [6, 24, 2, 2],
+            [6, 32, 3, 2],
+            [6, 64, 4, 2],
+            [6, 96, 3, 1],
+            [6, 160, 3, 2],
+            [6, 320, 1, 1],
+        ]
+
+        # building first layer
+        input_channel = int(first_channel_num * width_mult)
+        features = [conv_bn(data_dim, input_channel, stride=2)]
+        # building inverted residual blocks
+        for t, c, n, s in interverted_residual_setting:
+            output_channel = int(c * width_mult)
+            for i in range(n):
+                if i == 0:
+                    features.append(InvertedResidual(input_channel, output_channel, s, t))
+                else:
+                    features.append(InvertedResidual(input_channel, output_channel, 1, t))
+                input_channel = output_channel
+
+        self.features = nn.ModuleList(features)
+
+    def forward(self, x, steps=[]):
+        arm_sources = []
+        for k in range(len(self.features)):
+            x = self.features[k](x)
+            if k in steps:
+                arm_sources.append(x)
+
+        return x, arm_sources
+
+    def initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+            elif isinstance(m, nn.Linear):
+                n = m.weight.size(1)
+                m.weight.data.normal_(0, 0.01)
+                m.bias.data.zero_()

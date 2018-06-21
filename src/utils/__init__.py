@@ -7,7 +7,6 @@ from collections import OrderedDict
 
 from .log import setup_logger
 
-
 def load_weights(net, ckpt_path):
     state_dict = torch.load(ckpt_path)
     new_state_dict = OrderedDict()

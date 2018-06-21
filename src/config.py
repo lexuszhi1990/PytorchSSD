@@ -164,4 +164,8 @@ config.coco.dimension_320 = {
     'variance': [0.1, 0.2],
 
     'clip': True,
+
+    'width_mult': 0.5,
+
+    'base_channel_num': 128,
 }

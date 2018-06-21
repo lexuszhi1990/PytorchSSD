@@ -24,54 +24,22 @@ from src.data.data_augment import detection_collate, BaseTransform, preproc
 from src.data.coco import COCODet
 from src.data.voc import VOCDetection, AnnotationTransform
 from src.loss import RefineMultiBoxLoss, MultiBoxLoss
-from src.detection import Detect
+from src.detector import Detector
 from src.prior_box import PriorBox
-from src.utils import str2bool, setup_logger, kaiming_weights_init
-from src.utils.nms_wrapper import nms
+from src.utils.args import get_args
+from src.utils import setup_logger, kaiming_weights_init
 from src.utils.timer import Timer
+
+from src.utils.nms_wrapper import nms
 
 from src.symbol.RefineSSD_vgg import build_net
 from src.symbol.RefineSSD_mobilenet_v2 import RefineSSDMobileNet
 from refinedet_mobile_val import val
 
-parser = argparse.ArgumentParser(
-    description='Refined SSD train')
-parser.add_argument('--workspace', default='./workspace')
-parser.add_argument('--shape', default='320', help='320 or 512 input size.')
-parser.add_argument('--dataset', default='coco', help='VOC or COCO dataset')
-parser.add_argument('--batch_size', default=32, type=int, help='Batch size for training')
-parser.add_argument('--cuda', action="store_true", default=False, help='Use cuda to train model')
-parser.add_argument('--gpu_ids', nargs='+', default=[], help='gpu id')
-parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float, help='initial learning rate')
-parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
-parser.add_argument('--gamma', default=0.1, type=float, help='Gamma update for SGD')
-parser.add_argument('--weight_decay', default=5e-4, type=float, help='Weight decay for SGD')
-parser.add_argument('--resume', default=False, help='resume net for retraining')
-parser.add_argument('--resume_epoch', default=0, type=int, help='resume iter for retraining')
-parser.add_argument('--max_epoch', default=200, type=int, help='max epoch for retraining')
-parser.add_argument('--save_frequency', default=10, type=int, help='epoch for saving ckpt')
-parser.add_argument('--jaccard_threshold', default=0.5, type=float, help='Min Jaccard index for matching')
-parser.add_argument('--num_workers', default=4, type=int, help='Number of workers used in dataloading')
-parser.add_argument('--visdom', default=False, type=str2bool, help='Use visdom to for loss visualization')
-parser.add_argument('--basenet', default='None', help='pretrained base model')
-parser.add_argument('--prefix', default='refinedet_model', type=str, help='prefix for saved module name')
-
-parser.add_argument('--warm_epoch', default=1,
-                    type=int, help='max epoch for retraining')
-parser.add_argument('--date', default='0327')
-parser.add_argument('--retest', default=False, type=bool,
-                    help='test cache results')
-parser.add_argument('--test_frequency',default=10)
-parser.add_argument('--send_images_to_visdom', type=str2bool, default=False, help='Sample a random image from each 10th batch, send it to visdom after augmentations step')
-
-def train(workspace, train_dataset, val_dataset, val_trainsform, module_cfg, batch_size, shape, base_lr, momentum, weight_decay, gamma, gpu_ids, enable_cuda, max_epoch, resume, resume_epoch, num_workers, save_frequency, basenet, enable_visdom, prefix='refinedet_model'):
+def train(workspace, train_dataset, val_dataset, val_trainsform, priors, detector, base_channel_num, width_mult, batch_size, num_workers, shape, base_lr, momentum, weight_decay, gamma, max_epoch=200, resume=False, resume_epoch=0, save_frequency=10, enable_cuda=False, gpu_ids=[], enable_visdom=False, prefix='refinedet_model'):
 
     if enable_visdom:
         viz = visdom.Visdom()
-
-    priorbox = PriorBox(module_cfg)
-    detector = Detect(num_classes, 0, module_cfg, object_score=0.01)
-    priors = Variable(priorbox.forward(), volatile=True)
 
     workspace_path = Path(workspace)
     if not workspace_path.exists():
@@ -82,46 +50,15 @@ def train(workspace, train_dataset, val_dataset, val_trainsform, module_cfg, bat
     log_file_path = workspace_path.joinpath("train-%s" % (shape))
     setup_logger(log_file_path.as_posix())
 
-    net = RefineSSDMobileNet(320, num_classes, use_refine=True, base_channel_num=128, width_mult=1)
+    net = RefineSSDMobileNet(shape, num_classes, base_channel_num=base_channel_num, width_mult=width_mult, use_refine=True)
+    net.initialize_weights()
     logging.info(net)
-    if not resume:
-        logging.info('Initializing weights...')
-        net.initialize_base_weights()
-        net.appended_layer.apply(kaiming_weights_init)
-        net.trans_layers.apply(kaiming_weights_init)
-        net.up_layers.apply(kaiming_weights_init)
-        net.latent_layrs.apply(kaiming_weights_init)
-        net.arm_loc.apply(kaiming_weights_init)
-        net.arm_conf.apply(kaiming_weights_init)
-        net.odm_loc.apply(kaiming_weights_init)
-        net.odm_conf.apply(kaiming_weights_init)
-        logging.info('Initializing weights done...')
-    else:
-        # load resume network
-        # resume_path = os.path.join(save_folder,version+'_'+dataset + '_epoches_'+ str(resume_epoch) + '.pth')
-        logging.info('Loading resume network',resume_path)
-        state_dict = torch.load(resume_path)
-        # create new OrderedDict that does not contain `module.`
-        from collections import OrderedDict
-        new_state_dict = OrderedDict()
-        for k, v in state_dict.items():
-            head = k[:7]
-            if head == 'module.':
-                name = k[7:] # remove `module.`
-            else:
-                name = k
-            new_state_dict[name] = v
-        net.load_state_dict(new_state_dict)
 
     if enable_cuda and len(gpu_ids) > 0:
         net = torch.nn.DataParallel(net, device_ids=gpu_ids)
 
     timer = Timer()
-    mean_odm_loss_c = 0
-    mean_odm_loss_l = 0
-    mean_arm_loss_c = 0
-    mean_arm_loss_l = 0
-    log_interval = 50
+    mean_odm_loss_c, mean_odm_loss_l, mean_arm_loss_c, mean_arm_loss_l = 0, 0, 0, 0
     arm_criterion = RefineMultiBoxLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
     odm_criterion = RefineMultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
     criterion = MultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.5, enable_cuda=enable_cuda)
@@ -148,7 +85,6 @@ def train(workspace, train_dataset, val_dataset, val_trainsform, module_cfg, bat
             timer.tic()
             _, _, odm_loc, odm_conf = net(images)
             timer.toc()
-            # odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets)
             odm_loss_l, odm_loss_c = criterion((odm_loc, odm_conf), priors, targets)
             optimizer.zero_grad()
             loss = odm_loss_l + odm_loss_c
@@ -159,13 +95,10 @@ def train(workspace, train_dataset, val_dataset, val_trainsform, module_cfg, bat
             mean_odm_loss_l += odm_loss_l.data[0]
             mean_odm_loss_c += odm_loss_c.data[0]
 
-            if iteration % log_interval == 0:
-                logging.info("[%d/%d] || total_loss: %.4f(mean_arm_loc_loss: %.4f mean_arm_cls_loss: %.4f mean_obm_loc_loss: %.4f mean_obm_cls_loss: %.4f) || Batch time: %.4f sec. || LR: %.6f" % (epoch, iteration, loss, mean_arm_loss_l/log_interval, mean_arm_loss_c/log_interval, mean_odm_loss_l/log_interval, mean_odm_loss_c/log_interval, timer.average_time, optimizer.param_groups[0]['lr']))
+            if iteration % save_frequency == 0:
+                logging.info("[%d/%d] || total_loss: %.4f(mean_arm_loc_loss: %.4f mean_arm_cls_loss: %.4f mean_obm_loc_loss: %.4f mean_obm_cls_loss: %.4f) || Batch time: %.4f sec. || LR: %.6f" % (epoch, iteration, loss, mean_arm_loss_l/save_frequency, mean_arm_loss_c/save_frequency, mean_odm_loss_l/save_frequency, mean_odm_loss_c/save_frequency, timer.average_time, optimizer.param_groups[0]['lr']))
                 timer.clear()
-                mean_odm_loss_c = 0
-                mean_odm_loss_l = 0
-                mean_arm_loss_c = 0
-                mean_arm_loss_l = 0
+                mean_odm_loss_c, mean_odm_loss_l, mean_arm_loss_c, mean_arm_loss_l = 0, 0, 0, 0
 
         if epoch % save_frequency == 0:
             net.eval()
@@ -183,13 +116,12 @@ if __name__ == '__main__':
     # model = RefineSSDMobileNet(shape=320, num_classes=2, use_refine=True)
     # y = model(v2)
 
-    args = parser.parse_args()
+    args = get_args()
     workspace = args.workspace
     batch_size = args.batch_size
     shape = args.shape
     dataset = args.dataset.upper()
     base_lr = args.lr
-    warm_epoch = args.warm_epoch
     max_epoch = args.max_epoch
     resume = args.resume
     resume_epoch = args.resume_epoch
@@ -201,6 +133,11 @@ if __name__ == '__main__':
     basenet = args.basenet
     enable_visdom = args.visdom
     prefix = args.prefix
+    ckpt_path = args.ckpt_path
+    top_k = args.top_k
+    nms_thresh = args.nms_thresh
+    confidence_thresh = args.confidence_thresh
+
     gpu_ids = [int(i) for i in args.gpu_ids]
     enable_cuda = args.cuda and torch.cuda.is_available() and len(gpu_ids) > 0
     if enable_cuda:
@@ -214,10 +151,12 @@ if __name__ == '__main__':
     else:
         raise RuntimeError("not support dataset %s" % (dataset))
 
-    root_path, train_sets, val_sets = basic_conf.root_path,  basic_conf.train_sets, basic_conf.val_sets
-    num_classes, img_dim, rgb_means, rgb_std, augment_ratio = basic_conf.num_classes, basic_conf.img_dim, basic_conf.rgb_means, basic_conf.rgb_std, basic_conf.augment_ratio
+    root_path, train_sets, val_sets, num_classes, img_dim, rgb_means, rgb_std, augment_ratio = basic_conf.root_path, basic_conf.train_sets, basic_conf.val_sets, basic_conf.num_classes, basic_conf.img_dim, basic_conf.rgb_means, basic_conf.rgb_std, basic_conf.augment_ratio
     module_cfg = getattr(basic_conf, "dimension_%d"%(int(shape)))
     val_trainsform = BaseTransform(int(shape), rgb_means, rgb_std, (2, 0, 1))
+    priorbox = PriorBox(module_cfg)
+    priors = Variable(priorbox.forward(), volatile=True).data
+    detector = Detector(num_classes, top_k=top_k, conf_thresh=confidence_thresh, nms_thresh=nms_thresh, variance=module_cfg['variance'])
 
     if dataset == "VOC":
         train_dataset = VOCDetection(root_path, train_sets, preproc(img_dim, rgb_means, rgb_std, augment_ratio), AnnotationTransform())
@@ -226,4 +165,4 @@ if __name__ == '__main__':
         train_dataset = COCODet(root_path, train_sets, preproc(img_dim, rgb_means, rgb_std, augment_ratio))
         val_dataset = COCODet(root_path, val_sets, None)
 
-    train(workspace, train_dataset, val_dataset, val_trainsform, module_cfg, batch_size, shape, base_lr, momentum, weight_decay, gamma, gpu_ids, enable_cuda, max_epoch, resume, resume_epoch, num_workers, save_frequency, basenet, enable_visdom, prefix=prefix)
+    train(workspace, train_dataset, val_dataset, val_trainsform, priors, detector, module_cfg['base_channel_num'], module_cfg['width_mult'], batch_size, num_workers, shape, base_lr, momentum, weight_decay, gamma, max_epoch, resume, resume_epoch, save_frequency, enable_cuda, gpu_ids, enable_visdom, prefix=prefix)
