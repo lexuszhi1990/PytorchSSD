@@ -264,7 +264,7 @@ class RefineSSDMobileNet(nn.Module):
 
         obm_loc_result = obm_loc.view(obm_loc.size(0), -1, 4)
         if inference:
-            obm_conf_result = nn.Softmax(-1)(obm_conf.view(-1, self.num_classes))
+            obm_conf_result = nn.Softmax(-1)(obm_conf.view(obm_conf.size(0), -1, self.num_classes))
         else:
             obm_conf_result = obm_conf.view(obm_conf.size(0), -1, self.num_classes)
 

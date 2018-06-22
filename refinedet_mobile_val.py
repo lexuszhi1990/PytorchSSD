@@ -19,7 +19,7 @@ from src.config import config
 from src.data.data_augment import BaseTransform
 from src.data.coco import COCODet
 from src.data.voc import VOCDetection, AnnotationTransform
-from src.detector import Detector, DetectorV1
+from src.detector import Detector
 from src.prior_box import PriorBox
 from src.utils import load_weights
 from src.utils.args import get_args
@@ -111,13 +111,17 @@ def val(net, detector, priors, num_classes, val_dataset, transform, save_folder,
 
         _t['im_detect'].tic()
         out = net(x=x, inference=True)  # forward pass
-        detect_time = _t['im_detect'].toc()
-
-        _t['misc'].tic()
         arm_loc, arm_conf, odm_loc, odm_conf = out
-        boxes, scores = detector.forward((odm_loc, odm_conf), priors, (arm_loc, arm_conf))
+        boxes, scores = detector.forward((odm_loc, odm_conf), priors, (arm_loc,arm_conf))
+        detect_time = _t['im_detect'].toc()
         boxes = boxes.cpu().numpy()
         scores = scores.cpu().numpy()
+        scale = torch.Tensor([img.shape[1], img.shape[0],
+                              img.shape[1], img.shape[0]]).cpu().numpy()
+        boxes *= scale
+
+        _t['misc'].tic()
+
         for j in range(1, num_classes):
             inds = np.where(scores[:, j] > thresh)[0]
             if len(inds) == 0:
@@ -128,7 +132,7 @@ def val(net, detector, priors, num_classes, val_dataset, transform, save_folder,
             c_dets = np.hstack((c_bboxes, c_scores[:, np.newaxis])).astype(
                 np.float32, copy=False)
 
-            keep = nms(c_dets, 0.45, force_cpu=True)
+            keep = nms(c_dets, 0.45, force_cpu=True, soft_nms=False)
             keep = keep[:50]
             c_dets = c_dets[keep, :]
             all_boxes[j][i] = c_dets
@@ -183,7 +187,7 @@ if __name__ == '__main__':
     val_trainsform = BaseTransform(module_cfg['shape'], rgb_means, rgb_std, (2, 0, 1))
     priorbox = PriorBox(module_cfg)
     priors = Variable(priorbox.forward(), volatile=True)
-    detector = DetectorV1(num_classes, top_k=module_cfg['top_k'], conf_thresh=module_cfg['confidence_thresh'], nms_thresh=module_cfg['nms_thresh'], variance=module_cfg['variance'])
+    detector = Detector(num_classes, top_k=module_cfg['top_k'], conf_thresh=module_cfg['confidence_thresh'], nms_thresh=module_cfg['nms_thresh'], variance=module_cfg['variance'])
 
     net = RefineSSDMobileNet(shape, num_classes, base_channel_num=module_cfg['base_channel_num'], width_mult=module_cfg['width_mult'], use_refine=module_cfg['use_refine'])
 
@@ -192,6 +196,7 @@ if __name__ == '__main__':
     elif dataset == "COCO":
         val_dataset = COCODet(root_path, val_sets, None)
 
+    # val_bak(net, detector, priors, num_classes, val_dataset, val_trainsform, workspace, ckpt_path=ckpt_path, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005)
     val(net, detector, priors, num_classes, val_dataset, val_trainsform, workspace, ckpt_path=ckpt_path, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005)
 
     # resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/v1/refineDet-model-50.pth'
