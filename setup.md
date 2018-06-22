@@ -187,7 +187,7 @@ CUDA_VISIBLE_DEVICES=1 python refinedet_mobile_val.py --dataset COCO --gpu_ids 0
 
 CUDA_VISIBLE_DEVICES=5 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 --cuda --batch_size 96 --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v1 --num_workers 8 --confidence_thresh 0.05 --lr 0.04
 
-CUDA_VISIBLE_DEVICES=6 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 --cuda --batch_size 64 --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v2 --num_workers 8 --confidence_thresh 0.05 --lr 0.04
+CUDA_VISIBLE_DEVICES=6 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v2 --batch_size 64 --num_workers 8 --confidence_thresh 0.05 --lr 0.04
 
 ### troubleshoot
 

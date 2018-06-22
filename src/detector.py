@@ -50,7 +50,7 @@ class Detector(Function):
             arm_loc_data = arm_loc.data
             arm_conf_data = arm_conf.data
             arm_object_conf = arm_conf_data[:, 1:]
-            no_object_index = arm_object_conf <= 0
+            no_object_index = arm_object_conf <= 0.01
             conf_data[no_object_index.expand_as(conf_data)] = 0
 
         conf_preds = conf_data.view(num, num_priors, self.num_classes).transpose(2, 1)

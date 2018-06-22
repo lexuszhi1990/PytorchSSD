@@ -15,6 +15,47 @@ def point_form(boxes):
                      boxes[:, :2] + boxes[:, 2:]/2), 1)  # xmax, ymax
 
 
+def IoG(box_a, box_b):
+    """Compute the IoG of two sets of boxes.
+    E.g.:
+        A ∩ B / A = A ∩ B / area(A)
+    Args:
+        box_a: (tensor) Ground truth bounding boxes, Shape: [num_objects,4]
+        box_b: (tensor) Prior boxes from priorbox layers, Shape: [num_objects,4]
+    Return:
+        IoG: (tensor) Shape: [num_objects]
+    """
+    inter_xmin = torch.max(box_a[:, 0], box_b[:, 0])
+    inter_ymin = torch.max(box_a[:, 1], box_b[:, 1])
+    inter_xmax = torch.min(box_a[:, 2], box_b[:, 2])
+    inter_ymax = torch.min(box_a[:, 3], box_b[:, 3])
+    Iw = torch.clamp(inter_xmax - inter_xmin, min=0)
+    Ih = torch.clamp(inter_ymax - inter_ymin, min=0)
+    I = Iw * Ih
+    G = (box_a[:, 2] - box_a[:, 0]) * (box_a[:, 3] - box_a[:, 1])
+    return I / G
+
+
+def decode_new(loc, priors, variances):
+    """Decode locations from predictions using priors to undo
+    the encoding we did for offset regression at train time.
+    Args:
+        loc (tensor): location predictions for loc layers,
+            Shape: [num_priors,4]
+        priors (tensor): Prior boxes in center-offset form.
+            Shape: [num_priors,4].
+        variances: (list[float]) Variances of priorboxes
+    Return:
+        decoded bounding box predictions
+    """
+    boxes = torch.cat((
+        priors[:, :2] + loc[:, :2] * variances[0] * priors[:, 2:],
+        priors[:, 2:] * torch.exp(loc[:, 2:] * variances[1])), 1)
+    boxes[:, :2] = boxes[:, :2] - boxes[:, 2:] / 2
+    boxes[:, 2:] = boxes[:, 2:] + boxes[:, :2]
+    return boxes
+
+
 def center_size(boxes):
     """ Convert prior_boxes to (cx, cy, w, h)
     representation for comparison to center-size form ground truth data.
@@ -67,6 +108,7 @@ def jaccard(box_a, box_b):
               (box_b[:, 3]-box_b[:, 1])).unsqueeze(0).expand_as(inter)  # [A,B]
     union = area_a + area_b - inter
     return inter / union  # [A,B]
+
 
 def matrix_iou(a,b):
     """
@@ -123,6 +165,7 @@ def match(threshold, gt_loc, gt_cls, priors, variances):
 
     return loc, conf
 
+
 def refine_match(threshold, gt_loc, gt_cls, priors, arm_loc, variances):
     """Match each arm bbox with the ground truth box of the highest jaccard
     overlap, encode the bounding boxes, then return the matched indices
@@ -170,6 +213,7 @@ def refine_match(threshold, gt_loc, gt_cls, priors, arm_loc, variances):
     # loc  : [num_priors,4] encoded offsets to learn
     # conf : [num_priors] top class label for each prior
     return loc, conf
+
 
 def encode(matched, priors, variances):
     """Encode the variances from the priorbox layers into the ground truth boxes
@@ -219,6 +263,7 @@ def encode_multi(matched, priors, offsets, variances):
     # return target for smooth_l1_loss
     return torch.cat([g_cxcy, g_wh], 1)  # [num_priors,4]
 
+
 # Adapted from https://github.com/Hakuyume/chainer-ssd
 def decode(loc, priors, variances):
     """Decode locations from predictions using priors to undo
@@ -239,6 +284,7 @@ def decode(loc, priors, variances):
     boxes[:, 2:] += boxes[:, :2]
     return boxes
 
+
 def decode_multi(loc, priors, offsets, variances):
     """Decode locations from predictions using priors to undo
     the encoding we did for offset regression at train time.
@@ -258,6 +304,7 @@ def decode_multi(loc, priors, offsets, variances):
     boxes[:, :2] -= boxes[:, 2:] / 2
     boxes[:, 2:] += boxes[:, :2]
     return boxes
+
 
 def log_sum_exp(x):
     """Utility function for computing log_sum_exp while determining
