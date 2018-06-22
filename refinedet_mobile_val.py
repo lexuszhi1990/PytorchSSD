@@ -90,6 +90,7 @@ if __name__ == '__main__':
     workspace = args.workspace
     shape = int(args.shape)
     dataset = args.dataset.upper()
+    prefix = args.prefix
     ckpt_path = args.ckpt_path
     top_k = args.top_k
     nms_thresh = args.nms_thresh
@@ -114,7 +115,7 @@ if __name__ == '__main__':
     val_trainsform = BaseTransform(shape, rgb_means, rgb_std, (2, 0, 1))
     priorbox = PriorBox(module_cfg)
     priors = Variable(priorbox.forward(), volatile=True).data
-    detector = Detector(num_classes, top_k=top_k, conf_thresh=confidence_thresh, nms_thresh=nms_thresh, variance=module_cfg['variance'])
+    detector = Detector(num_classes, top_k=module_cfg['top_k'], conf_thresh=module_cfg['confidence_thresh'], nms_thresh=module_cfg['nms_thresh'], variance=module_cfg['variance'])
 
     net = RefineSSDMobileNet(shape, num_classes, base_channel_num=module_cfg['base_channel_num'], width_mult=module_cfg['width_mult'], use_refine=module_cfg['use_refine'])
 

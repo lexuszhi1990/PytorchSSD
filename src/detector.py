@@ -10,7 +10,7 @@ class Detector(Function):
     confidence score and locations.
     """
 
-    def __init__(self, num_classes, top_k=200, conf_thresh=0.5, nms_thresh=0.55, variance=[0.1, 0.2], max_per_image=0, bg_label=0, nms_intersection_class=True):
+    def __init__(self, num_classes, top_k=200, conf_thresh=0.05, nms_thresh=0.45, variance=[0.1, 0.2], max_per_image=0, bg_label=0, nms_intersection_class=True):
         self.num_classes = num_classes
         self.bg_label = bg_label
         self.top_k = top_k

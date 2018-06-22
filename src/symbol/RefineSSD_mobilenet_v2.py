@@ -187,10 +187,11 @@ class RefineSSDMobileNet(nn.Module):
             self.trans_layers.apply(kaiming_weights_init)
             self.up_layers.apply(kaiming_weights_init)
             self.latent_layrs.apply(kaiming_weights_init)
-            self.arm_loc.apply(kaiming_weights_init)
-            self.arm_conf.apply(kaiming_weights_init)
             self.odm_loc.apply(kaiming_weights_init)
             self.odm_conf.apply(kaiming_weights_init)
+            if self.use_refine:
+                self.arm_loc.apply(kaiming_weights_init)
+                self.arm_conf.apply(kaiming_weights_init)
 
     def base_forward(self, x, steps=[]):
         arm_sources = []
@@ -209,7 +210,7 @@ class RefineSSDMobileNet(nn.Module):
         obm_conf_list = list()
         obm_sources = list()
         trans_layer_list = list()
-        arm_loc, arm_conf, obm_loc, obm_conf = None, None, None, None
+        arm_loc_result, arm_conf_result, obm_loc_result, obm_conf_result = None, None, None, None
 
         # 1, 2, 4, 7, 11, 14, 17,
         base_output, arm_sources = self.base_forward(x, [4, 7, 14])

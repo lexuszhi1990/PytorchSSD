@@ -91,7 +91,6 @@ config.coco.img_dim = 320
 config.coco.rgb_std = (1,1,1)
 config.coco.rgb_means = (104,117,123)
 config.coco.augment_ratio = 0.2
-config.coco.base_stepvalues = [90, 120, 140]
 
 config.coco.dimension_300 = {
     'feature_maps': [38, 19, 10, 5, 3, 1],
@@ -165,11 +164,49 @@ config.coco.dimension_320 = {
 
     'clip': True,
 
-    'width_mult': 1,
+    'width_mult': 0.5,
 
     'base_channel_num': 128,
+}
 
-    'use_refine': True
+config.coco.list = {
+    "v1" : {
+        'feature_maps': [40, 20, 10, 5],
+        'min_dim': 320,
+        'steps': [8, 16, 32, 64],
+        'min_sizes': [32, 64, 128, 256],
+        'max_sizes': [],
+        'aspect_ratios': [[2], [2], [2], [2]],
+        'variance': [0.1, 0.2],
+        'clip': True,
+        'width_mult': 1,
+        'base_channel_num': 128,
+        'use_refine': True,
+    },
+    "v2" : {
+        'feature_maps': [40, 20, 10, 5],
+        'min_dim': 320,
+        'steps': [8, 16, 32, 64],
+        'min_sizes': [32, 64, 128, 256],
+        'max_sizes': [],
+        'aspect_ratios': [[2], [2], [2], [2]],
+        'variance': [0.1, 0.2],
+        'clip': True,
 
+        'width_mult': 1,
+        'base_channel_num': 128,
+        'use_refine': False,
+        'batch_size': 64,
+        'num_workers': 8,
+        'shape': 320,
+        'base_lr': 1e-3,
+        'momentum': 0.9,
+        'weight_decay': 5e-4,
+        'gamma': 0.1,
+        'max_epoch': 200,
 
+        'top_k': 200,
+        'confidence_thresh': 0.01,
+        'nms_thresh': 0.45,
+    },
 }

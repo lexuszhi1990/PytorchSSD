@@ -36,7 +36,7 @@ from src.symbol.RefineSSD_vgg import build_net
 from src.symbol.RefineSSD_mobilenet_v2 import RefineSSDMobileNet
 from refinedet_mobile_val import val
 
-def train(workspace, train_dataset, val_dataset, val_trainsform, priors, detector, base_channel_num, width_mult, batch_size, num_workers, shape, base_lr, momentum, weight_decay, gamma, max_epoch=200, resume=False, resume_epoch=0, save_frequency=10, enable_cuda=False, gpu_ids=[], enable_visdom=False, prefix='refinedet_model'):
+def train(workspace, train_dataset, val_dataset, val_trainsform, priors, detector, base_channel_num, width_mult, use_refine,batch_size, num_workers, shape, base_lr, momentum, weight_decay, gamma, max_epoch=200, resume=False, resume_epoch=0, save_frequency=10, enable_cuda=False, gpu_ids=[], enable_visdom=False, prefix='refinedet_model'):
 
     if enable_visdom:
         viz = visdom.Visdom()
@@ -50,7 +50,7 @@ def train(workspace, train_dataset, val_dataset, val_trainsform, priors, detecto
     log_file_path = workspace_path.joinpath("train-%s" % (shape))
     setup_logger(log_file_path.as_posix())
 
-    net = RefineSSDMobileNet(shape, num_classes, base_channel_num=base_channel_num, width_mult=width_mult, use_refine=True)
+    net = RefineSSDMobileNet(shape, num_classes, base_channel_num=base_channel_num, width_mult=width_mult, use_refine=use_refine)
     net.initialize_weights()
     logging.info(net)
 
@@ -83,14 +83,19 @@ def train(workspace, train_dataset, val_dataset, val_trainsform, priors, detecto
             arm_loc, arm_conf, odm_loc, odm_conf = net(images)
             timer.toc()
 
-            arm_loss_l, arm_loss_c = arm_criterion((arm_loc, arm_conf), priors, targets)
+            if use_refine:
+                arm_loss_l, arm_loss_c = arm_criterion((arm_loc, arm_conf), priors, targets)
             odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets, (arm_loc, arm_conf))
             optimizer.zero_grad()
-            loss = 0.2 * (arm_loss_l + arm_loss_c) + 0.8 * (odm_loss_l + odm_loss_c)
+            if use_refine:
+                loss = 0.2 * (arm_loss_l + arm_loss_c) + 0.8 * (odm_loss_l + odm_loss_c)
+            else:
+                loss = odm_loss_l + odm_loss_c
             loss.backward()
             optimizer.step()
-            mean_arm_loss_c += arm_loss_c.data[0]
-            mean_arm_loss_l += arm_loss_l.data[0]
+            if use_refine:
+                mean_arm_loss_c += arm_loss_c.data[0]
+                mean_arm_loss_l += arm_loss_l.data[0]
             mean_odm_loss_l += odm_loss_l.data[0]
             mean_odm_loss_c += odm_loss_c.data[0]
 
@@ -123,22 +128,22 @@ if __name__ == '__main__':
     batch_size = args.batch_size
     shape = args.shape
     dataset = args.dataset.upper()
-    base_lr = args.lr
-    max_epoch = args.max_epoch
+    prefix = args.prefix
     resume = args.resume
     resume_epoch = args.resume_epoch
-    momentum = args.momentum
-    weight_decay = args.weight_decay
-    gamma = args.gamma
-    num_workers = args.num_workers
     save_frequency = args.save_frequency
-    basenet = args.basenet
     enable_visdom = args.visdom
-    prefix = args.prefix
-    ckpt_path = args.ckpt_path
-    top_k = args.top_k
-    nms_thresh = args.nms_thresh
-    confidence_thresh = args.confidence_thresh
+
+    # base_lr = args.lr
+    # momentum = args.momentum
+    # weight_decay = args.weight_decay
+    # gamma = args.gamma
+    # num_workers = args.num_workers
+    # basenet = args.basenet
+    # ckpt_path = args.ckpt_path
+    # top_k = args.top_k
+    # nms_thresh = args.nms_thresh
+    # confidence_thresh = args.confidence_thresh
 
     gpu_ids = [int(i) for i in args.gpu_ids]
     enable_cuda = args.cuda and torch.cuda.is_available() and len(gpu_ids) > 0
@@ -154,11 +159,14 @@ if __name__ == '__main__':
         raise RuntimeError("not support dataset %s" % (dataset))
 
     root_path, train_sets, val_sets, num_classes, img_dim, rgb_means, rgb_std, augment_ratio = basic_conf.root_path, basic_conf.train_sets, basic_conf.val_sets, basic_conf.num_classes, basic_conf.img_dim, basic_conf.rgb_means, basic_conf.rgb_std, basic_conf.augment_ratio
-    module_cfg = getattr(basic_conf, "dimension_%d"%(int(shape)))
+    # module_cfg = getattr(basic_conf, "dimension_%d"%(int(shape)))
+    module_cfg = basic_conf.list[args.config_id]
+
     val_trainsform = BaseTransform(int(shape), rgb_means, rgb_std, (2, 0, 1))
     priorbox = PriorBox(module_cfg)
     priors = Variable(priorbox.forward(), volatile=True).data
-    detector = Detector(num_classes, top_k=top_k, conf_thresh=confidence_thresh, nms_thresh=nms_thresh, variance=module_cfg['variance'])
+    # detector = Detector(num_classes, top_k=top_k, conf_thresh=confidence_thresh, nms_thresh=nms_thresh, variance=module_cfg['variance'])
+    detector = Detector(num_classes, top_k=module_cfg['top_k'], conf_thresh=module_cfg['confidence_thresh'], nms_thresh=module_cfg['nms_thresh'], variance=module_cfg['variance'])
 
     if dataset == "VOC":
         train_dataset = VOCDetection(root_path, train_sets, preproc(img_dim, rgb_means, rgb_std, augment_ratio), AnnotationTransform())
@@ -167,4 +175,4 @@ if __name__ == '__main__':
         train_dataset = COCODet(root_path, train_sets, preproc(img_dim, rgb_means, rgb_std, augment_ratio))
         val_dataset = COCODet(root_path, val_sets, None)
 
-    train(workspace, train_dataset, val_dataset, val_trainsform, priors, detector, module_cfg['base_channel_num'], module_cfg['width_mult'], batch_size, num_workers, shape, base_lr, momentum, weight_decay, gamma, max_epoch, resume, resume_epoch, save_frequency, enable_cuda, gpu_ids, enable_visdom, prefix=prefix)
+    train(workspace, train_dataset, val_dataset, val_trainsform, priors, detector, module_cfg['base_channel_num'], module_cfg['width_mult'], module_cfg['use_refine'], module_cfg['batch_size'], module_cfg['num_workers'], module_cfg['shape'], module_cfg['base_lr'], module_cfg['momentum'], module_cfg['weight_decay'], module_cfg['gamma'], module_cfg['max_epoch'], resume, resume_epoch, save_frequency, enable_cuda, gpu_ids, enable_visdom, prefix)
