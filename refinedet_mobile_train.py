@@ -68,7 +68,7 @@ def train(workspace, train_dataset, val_dataset, val_trainsform, priors, detecto
     # optimizer = optim.RMSprop(net.parameters(), lr=base_lr, alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
     optimizer = optim.SGD(net.parameters(), lr=base_lr, momentum=momentum, weight_decay=weight_decay)
     scheduler = MultiStepLR(optimizer, milestones=[ i*6 for i in range(1, max_epoch//6) ], gamma=0.65)
-    for epoch in range(1, max_epoch):
+    for epoch in range(max_epoch):
         net.train()
         scheduler.step()
         for iteration, (images, targets) in enumerate(train_dataset_loader):
