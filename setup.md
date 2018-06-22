@@ -195,6 +195,8 @@ CUDA_VISIBLE_DEVICES=1 python refinedet_mobile_train.py --dataset COCO --gpu_ids
 
 CUDA_VISIBLE_DEVICES=1 python refinedet_mobile_val.py --dataset COCO --gpu_ids 0 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v0.2 --config_id v2 --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v0.2/refinedet_model-0.pth
 
+CUDA_VISIBLE_DEVICES=0 python refinedet_mobile_val.py --dataset COCO --gpu_ids 0 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v0.2 --config_id v2 --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v0.2/refinedet_model-0.pth
+
 ### troubleshoot
 
 #### pyinn

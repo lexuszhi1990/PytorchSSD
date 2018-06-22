@@ -127,7 +127,6 @@ class DetectorV1(Function):
         assert num == 1, "num is %d" % num
         index = 0
         num_priors = prior_data.size(0)
-        output = torch.zeros(self.num_classes, self.top_k, 6)
 
         arm_loc, arm_conf = arm_data
         if (arm_loc is not None) or (arm_conf is not None):
@@ -137,33 +136,15 @@ class DetectorV1(Function):
             no_object_index = arm_object_conf <= 0.01
             conf_data[no_object_index.expand_as(conf_data)] = 0
 
-        conf_preds = conf_data.view(num, num_priors, self.num_classes).transpose(2, 1)
+        conf_preds = conf_data.unsqueeze(0)
 
-        # Decode predictions into bboxes.
-        if arm_loc is not None:
-            default = decode(arm_loc_data[index], prior_data, self.variance)
-            default = center_size(default)
+        # conf_preds = conf_data.view(num, num_priors, self.num_classes).transpose(2, 1)
+        if arm_loc:
+            default_prior = decode(arm_loc_data[i], prior_data, self.variance)
+            default_prior = center_size(default_prior)
         else:
-            default = prior_data
-        decoded_boxes = decode(loc_data[index], default, self.variance)
+            default_prior = prior_data
+        decoded_boxes = decode(loc_data[index], default_prior, self.variance)
         conf_scores = conf_preds[index].clone()
 
-        for cls_id in range(self.num_classes):
-            cls_mask = conf_scores[cls_id].gt(self.conf_thresh)
-            scores = conf_scores[cls_id][cls_mask]
-            if scores.dim() == 0:
-                continue
-            decoded_cls_mask = cls_mask.unsqueeze(1).expand_as(decoded_boxes)
-            boxes = decoded_boxes[decoded_cls_mask].view(-1, 4)
-            # boxes[boxes<0]=0
-            # idx of highest scoring and non-overlapping boxes per class
-            ids, count = pytorch_nms(boxes, scores, self.nms_thresh, self.top_k)
-            cls_list = torch.Tensor([1 for _ in range(self.top_k)]).unsqueeze(1)
-            output[cls_id, :count] = torch.cat((cls_list[:count], scores[ids[:count]].unsqueeze(1), boxes[ids[:count]]), 1)
-
-        output = output.contiguous().view(-1, 6)
-        filter_mask = (output[:, 0] > 0).nonzero()
-        if len(filter_mask) > 0:
-            return output[filter_mask.squeeze(1)]
-        else:
-            return torch.zeros(self.top_k, 6)
+        return decoded_boxes, conf_scores
