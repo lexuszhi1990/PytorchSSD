@@ -1,20 +1,17 @@
 # -*- coding: utf-8 -*-
-from __future__ import division
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-from data import coco as cfg
 from src.utils.box_utils import IoG, decode_new
-import sys
 
 
 class RepulsionLoss(nn.Module):
 
-    def __init__(self, use_gpu=True, sigma=0.):
+    def __init__(self, variance=[0.1, 0.2], sigma=0.):
         super(RepulsionLoss, self).__init__()
-        self.use_gpu = use_gpu
-        self.variance = cfg['variance']
+        self.variance = variance
         self.sigma = sigma
 
     # TODO

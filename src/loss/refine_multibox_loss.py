@@ -5,6 +5,8 @@ from torch.autograd import Variable
 
 from src.utils.box_utils import match, refine_match, log_sum_exp
 
+from .repulsion_loss import RepulsionLoss
+
 class RefineMultiBoxLoss(nn.Module):
     """SSD Weighted Loss Function
     Compute Targets:
@@ -29,7 +31,7 @@ class RefineMultiBoxLoss(nn.Module):
     """
 
 
-    def __init__(self, num_classes, overlap_thresh, neg_pos_ratio, object_score=0.01, variance=[0.1,0.2], bg_class_id=0, enable_cuda=False, filter_arm_object=False):
+    def __init__(self, num_classes, overlap_thresh, neg_pos_ratio, object_score=0.01, variance=[0.1, 0.2], bg_class_id=0, enable_cuda=False, filter_arm_object=False):
         super(RefineMultiBoxLoss, self).__init__()
 
         self.num_classes = num_classes
@@ -41,7 +43,7 @@ class RefineMultiBoxLoss(nn.Module):
         self.filter_arm_object = filter_arm_object
         self.bg_class_id = bg_class_id
 
-    def forward(self, pred_data, priors_data, gt_data, arm_data=(None, None)):
+    def forward(self, pred_data, priors, gt_data, arm_data=(None, None)):
         """Multibox Loss
         Args:
             pred_data (tuple): A tuple containing loc preds, conf preds,
@@ -57,7 +59,9 @@ class RefineMultiBoxLoss(nn.Module):
         pred_loc, pred_score = pred_data
         arm_loc, arm_conf = arm_data
         num = pred_loc.size(0)
-        num_priors = (priors_data.size(0))
+        pred_loc.size(1)
+        priors[:pred_loc.size(1), :]
+        num_priors = (priors.size(0))
 
         # match priors (default boxes) and ground truth boxes
         target_loc = torch.Tensor(num, num_priors, 4)
@@ -69,9 +73,9 @@ class RefineMultiBoxLoss(nn.Module):
             if self.num_classes == 2 and arm_loc is not None:
                 gt_cls = gt_cls > self.bg_class_id
             if arm_loc is None:
-                target_loc[idx], target_score[idx] = match(self.overlap_thresh, gt_loc, gt_cls, priors_data, self.variance)
+                target_loc[idx], target_score[idx] = match(self.overlap_thresh, gt_loc, gt_cls, priors.data, self.variance)
             else:
-                target_loc[idx], target_score[idx] = refine_match(self.overlap_thresh, gt_loc, gt_cls, priors_data, arm_loc[idx].data, self.variance)
+                target_loc[idx], target_score[idx] = refine_match(self.overlap_thresh, gt_loc, gt_cls, priors.data, arm_loc[idx].data, self.variance)
         if self.enable_cuda:
             target_loc = target_loc.cuda()
             target_score = target_score.cuda()
@@ -89,11 +93,15 @@ class RefineMultiBoxLoss(nn.Module):
         # Shape: [batch,num_priors,4]
         pred_loc_ = pred_loc[pos_idx].view(-1, 4)
         target_loc_ = target_loc[pos_idx].view(-1, 4)
+        priors_loc_ = priors[pos_idx].view(-1, 4)
         loss_l = F.smooth_l1_loss(pred_loc_, target_loc_, size_average=False)
+        # repul_loss = RepulsionLoss(variance=self.variance, sigma=0.)
+        # loss_l_repul = repul_loss(pred_loc_, target_loc_, priors_loc_)
 
         # Compute max conf across batch for hard negative mining
         batch_score = pred_score.view(-1, self.num_classes)
         loss_c = log_sum_exp(batch_score) - batch_score.gather(1, target_score.view(-1, 1))
+
         # Hard Negative Mining
         loss_c[pos] = 0 # filter out pos boxes for now
         loss_c = loss_c.view(num, -1)
@@ -102,6 +110,7 @@ class RefineMultiBoxLoss(nn.Module):
         num_pos = pos.long().sum(1, keepdim=True)
         num_neg = torch.clamp(self.neg_pos_ratio*num_pos, max=pos.size(1)-1)
         neg = idx_rank < num_neg.expand_as(idx_rank)
+
         # Confidence Loss Including Positive and Negative Examples
         pos_idx = pos.unsqueeze(2).expand_as(pred_score)
         neg_idx = neg.unsqueeze(2).expand_as(pred_score)

@@ -114,7 +114,7 @@ if __name__ == '__main__':
     module_cfg = getattr(basic_conf, "dimension_%d"%(int(shape)))
     val_trainsform = BaseTransform(shape, rgb_means, rgb_std, (2, 0, 1))
     priorbox = PriorBox(module_cfg)
-    priors = Variable(priorbox.forward(), volatile=True).data
+    priors = Variable(priorbox.forward(), volatile=True)
     detector = Detector(num_classes, top_k=module_cfg['top_k'], conf_thresh=module_cfg['confidence_thresh'], nms_thresh=module_cfg['nms_thresh'], variance=module_cfg['variance'])
 
     net = RefineSSDMobileNet(shape, num_classes, base_channel_num=module_cfg['base_channel_num'], width_mult=module_cfg['width_mult'], use_refine=module_cfg['use_refine'])

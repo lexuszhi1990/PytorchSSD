@@ -126,7 +126,6 @@ if __name__ == '__main__':
     args = get_args()
     workspace = args.workspace
     batch_size = args.batch_size
-    shape = args.shape
     dataset = args.dataset.upper()
     prefix = args.prefix
     resume = args.resume
@@ -134,6 +133,7 @@ if __name__ == '__main__':
     save_frequency = args.save_frequency
     enable_visdom = args.visdom
 
+    # shape = args.shape
     # base_lr = args.lr
     # momentum = args.momentum
     # weight_decay = args.weight_decay
@@ -157,14 +157,12 @@ if __name__ == '__main__':
         basic_conf = config.voc
     else:
         raise RuntimeError("not support dataset %s" % (dataset))
-
-    root_path, train_sets, val_sets, num_classes, img_dim, rgb_means, rgb_std, augment_ratio = basic_conf.root_path, basic_conf.train_sets, basic_conf.val_sets, basic_conf.num_classes, basic_conf.img_dim, basic_conf.rgb_means, basic_conf.rgb_std, basic_conf.augment_ratio
-    # module_cfg = getattr(basic_conf, "dimension_%d"%(int(shape)))
     module_cfg = basic_conf.list[args.config_id]
+    root_path, train_sets, val_sets, num_classes, img_dim, rgb_means, rgb_std, augment_ratio = basic_conf.root_path, basic_conf.train_sets, basic_conf.val_sets, basic_conf.num_classes, basic_conf.img_dim, basic_conf.rgb_means, basic_conf.rgb_std, basic_conf.augment_ratio
 
-    val_trainsform = BaseTransform(int(shape), rgb_means, rgb_std, (2, 0, 1))
+    val_trainsform = BaseTransform(module_cfg['shape'], rgb_means, rgb_std, (2, 0, 1))
     priorbox = PriorBox(module_cfg)
-    priors = Variable(priorbox.forward(), volatile=True).data
+    priors = Variable(priorbox.forward(), volatile=True)
     detector = Detector(num_classes, top_k=module_cfg['top_k'], conf_thresh=module_cfg['confidence_thresh'], nms_thresh=module_cfg['nms_thresh'], variance=module_cfg['variance'])
 
     if dataset == "VOC":
