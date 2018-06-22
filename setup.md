@@ -197,6 +197,9 @@ CUDA_VISIBLE_DEVICES=1 python refinedet_mobile_val.py --dataset COCO --gpu_ids 0
 
 CUDA_VISIBLE_DEVICES=0 python refinedet_mobile_val.py --dataset COCO --gpu_ids 0 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v0.2 --config_id v2 --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v0.2/refinedet_model-0.pth
 
+train v1:
+INFO:root:[56/120] || total_loss: 2.4257(mean_arm_loc_loss: 1.7216 mean_arm_cls_loss: 2.0315 mean_obm_loc_loss: 0.9019 mean_obm_cls_loss: 1.3022) || Batch time: 0.0119 sec. || LR: 0.000828
+
 ### troubleshoot
 
 #### pyinn
