@@ -131,13 +131,29 @@ class RefineSSDMobileNet(nn.Module):
                 nn.ReLU6(inplace=True)
             )
         self.trans_layers = nn.ModuleList([
-                nn.Sequential(nn.Conv2d(self.base_channel_list[0], self.base_channel_num, kernel_size=3, stride=1, padding=1), nn.ReLU6(inplace=True)),
+                nn.Sequential(
+                    nn.Conv2d(self.base_channel_list[0], self.base_channel_num, kernel_size=3, stride=1, padding=1),
+                    nn.ReLU6(inplace=True),
+                    nn.Conv2d(self.base_channel_num, self.base_channel_num, kernel_size=3, stride=1, padding=1),
+                ),
 
-                nn.Sequential(nn.Conv2d(self.base_channel_list[1], self.base_channel_num, kernel_size=3, stride=1, padding=1), nn.ReLU6(inplace=True)),
+                nn.Sequential(
+                    nn.Conv2d(self.base_channel_list[1], self.base_channel_num, kernel_size=3, stride=1, padding=1),
+                    nn.ReLU6(inplace=True),
+                    nn.Conv2d(self.base_channel_num, self.base_channel_num, kernel_size=3, stride=1, padding=1),
+                ),
 
-                nn.Sequential(nn.Conv2d(self.base_channel_list[2], self.base_channel_num, kernel_size=3, stride=1, padding=1), nn.ReLU6(inplace=True)),
+                nn.Sequential(
+                    nn.Conv2d(self.base_channel_list[2], self.base_channel_num, kernel_size=3, stride=1, padding=1),
+                    nn.ReLU6(inplace=True),
+                    nn.Conv2d(self.base_channel_num, self.base_channel_num, kernel_size=3, stride=1, padding=1),
+                ),
 
-                nn.Sequential(nn.Conv2d(self.base_channel_list[3]*2, self.base_channel_num, kernel_size=3, stride=1, padding=1), nn.ReLU6(inplace=True)),
+                nn.Sequential(
+                    nn.Conv2d(self.base_channel_list[3]*2, self.base_channel_num, kernel_size=3, stride=1, padding=1),
+                    nn.ReLU6(inplace=True),
+                    nn.Conv2d(self.base_channel_num, self.base_channel_num, kernel_size=3, stride=1, padding=1),
+                )
             ])
         self.up_layers = nn.ModuleList([
                 nn.ConvTranspose2d(self.base_channel_list[3]*2, self.base_channel_num, kernel_size=3, stride=1, padding=1),

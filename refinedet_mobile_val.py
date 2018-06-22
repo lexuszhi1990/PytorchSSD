@@ -111,8 +111,8 @@ if __name__ == '__main__':
 
     root_path, val_sets, num_classes, img_dim, rgb_means, rgb_std, augment_ratio = basic_conf.root_path, basic_conf.val_sets, basic_conf.num_classes, basic_conf.img_dim, basic_conf.rgb_means, basic_conf.rgb_std, basic_conf.augment_ratio
 
-    module_cfg = getattr(basic_conf, "dimension_%d"%(int(shape)))
-    val_trainsform = BaseTransform(shape, rgb_means, rgb_std, (2, 0, 1))
+    module_cfg = basic_conf.list[args.config_id]
+    val_trainsform = BaseTransform(module_cfg['shape'], rgb_means, rgb_std, (2, 0, 1))
     priorbox = PriorBox(module_cfg)
     priors = Variable(priorbox.forward(), volatile=True)
     detector = Detector(num_classes, top_k=module_cfg['top_k'], conf_thresh=module_cfg['confidence_thresh'], nms_thresh=module_cfg['nms_thresh'], variance=module_cfg['variance'])

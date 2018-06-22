@@ -21,7 +21,7 @@ class Detector(Function):
         # TODO: apply nms for output
         self.nms_intersection_class = nms_intersection_class
 
-    def forward(self, pred_data, prior_data, arm_data=(None, None)):
+    def forward(self, pred_data, prior, arm_data=(None, None)):
         """
         Args:
             pred_data:
@@ -39,6 +39,7 @@ class Detector(Function):
         loc, conf = pred_data
         loc_data = loc.data
         conf_data = conf.data
+        prior_data = prior.data
         num = loc_data.size(0)  # batch size
         assert num == 1, "num is %d" % num
         index = 0

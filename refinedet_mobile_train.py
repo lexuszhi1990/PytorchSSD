@@ -157,9 +157,9 @@ if __name__ == '__main__':
         basic_conf = config.voc
     else:
         raise RuntimeError("not support dataset %s" % (dataset))
-    module_cfg = basic_conf.list[args.config_id]
     root_path, train_sets, val_sets, num_classes, img_dim, rgb_means, rgb_std, augment_ratio = basic_conf.root_path, basic_conf.train_sets, basic_conf.val_sets, basic_conf.num_classes, basic_conf.img_dim, basic_conf.rgb_means, basic_conf.rgb_std, basic_conf.augment_ratio
 
+    module_cfg = basic_conf.list[args.config_id]
     val_trainsform = BaseTransform(module_cfg['shape'], rgb_means, rgb_std, (2, 0, 1))
     priorbox = PriorBox(module_cfg)
     priors = Variable(priorbox.forward(), volatile=True)
