@@ -3,7 +3,7 @@ from torch.autograd import Function
 
 from .utils.box_utils import decode, center_size, pytorch_nms
 
-class DetectorBAK(Function):
+class Detector(Function):
     """At test time, Detect is the final layer of SSD.  Decode location preds,
     apply non-maximum suppression to location predictions based on confidence
     scores and threshold to a top_k number of output predictions for both
@@ -73,22 +73,24 @@ class DetectorBAK(Function):
                 continue
             decoded_cls_mask = cls_mask.unsqueeze(1).expand_as(decoded_boxes)
             boxes = decoded_boxes[decoded_cls_mask].view(-1, 4)
-            boxes = boxes * scale
-            boxes[boxes < 0] = 0
+            # boxes = boxes * scale
+            # boxes[boxes < 0] = 0
             # idx of highest scoring and non-overlapping boxes per class
             ids, count = pytorch_nms(boxes, scores, self.nms_thresh, self.top_k)
             cls_list = torch.Tensor([1 for _ in range(self.top_k)]).unsqueeze(1)
             output[cls_id, :count] = torch.cat((cls_list[:count], scores[ids[:count]].unsqueeze(1), boxes[ids[:count]]), 1)
 
-        output = output.contiguous().view(-1, 6)
-        filter_mask = (output[:, 0] > 0).nonzero()
-        if len(filter_mask) > 0:
-            return output[filter_mask.squeeze(1)]
-        else:
-            return torch.zeros(self.top_k, 6)
+        # output = output.contiguous().view(-1, 6)
+        # filter_mask = (output[:, 0] > 0).nonzero()
+        # if len(filter_mask) > 0:
+        #     return output[filter_mask.squeeze(1)]
+        # else:
+        #     return torch.zeros(self.top_k, 6)
+
+        return output
 
 
-class Detector(Function):
+class DetectorScratch(Function):
     """At test time, Detect is the final layer of SSD.  Decode location preds,
     apply non-maximum suppression to location predictions based on confidence
     scores and threshold to a top_k number of output predictions for both

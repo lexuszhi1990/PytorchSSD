@@ -35,4 +35,4 @@ def nms(dets, thresh, force_cpu=False, soft_nms=False):
         else:
             return cpu_nms(dets, thresh)
     else:
-        return gpu_nms(dets, thresh)
+        return gpu_nms(dets, thresh, device_id=0)

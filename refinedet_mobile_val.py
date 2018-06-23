@@ -19,7 +19,7 @@ from src.config import config
 from src.data.data_augment import BaseTransform
 from src.data.coco import COCODet
 from src.data.voc import VOCDetection, AnnotationTransform
-from src.detector import Detector
+from src.detector import Detector, DetectorScratch
 from src.prior_box import PriorBox
 from src.utils import load_weights
 from src.utils.args import get_args
@@ -64,7 +64,9 @@ def val_bak(net, detector, priors, num_classes, val_dataset, transform, save_fol
         nms_time = _t['misc'].toc()
 
         for j in range(1, num_classes):
-            results = output_np[output_np[:, 0] == j]
+            results = output_np[j]
+            mask = results[:, 1] >= 0.05
+            results = results[mask]
             if len(results) == 0:
                 all_boxes[j][i] = np.empty([0, 5], dtype=np.float32)
                 continue
@@ -73,6 +75,13 @@ def val_bak(net, detector, priors, num_classes, val_dataset, transform, save_fol
             boxes = results[:, 2:6] * basic_scale
             c_dets = np.hstack((boxes, scores[:, np.newaxis])).astype(np.float32, copy=False)
             all_boxes[j][i] = c_dets
+        if max_per_image > 0:
+            image_scores = np.hstack([all_boxes[j][i][:, -1] for j in range(1,num_classes)])
+            if len(image_scores) > max_per_image:
+                image_thresh = np.sort(image_scores)[-max_per_image]
+                for j in range(1, num_classes):
+                    keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
+                    all_boxes[j][i] = all_boxes[j][i][keep, :]
 
         if i % 20 == 0:
             print('im_detect: {:d}/{:d} detect_time:{:.3f}s nms_time:{:.3f}s'.format(i + 1, num_images, detect_time, nms_time))
@@ -116,8 +125,8 @@ def val(net, detector, priors, num_classes, val_dataset, transform, save_folder,
         detect_time = _t['im_detect'].toc()
         boxes = boxes.cpu().numpy()
         scores = scores.cpu().numpy()
-        scale = torch.Tensor([img.shape[1], img.shape[0],
-                              img.shape[1], img.shape[0]]).cpu().numpy()
+        # scale = torch.Tensor([img.shape[1], img.shape[0], img.shape[1], img.shape[0]])
+        scale = np.array([img.shape[1], img.shape[0], img.shape[1], img.shape[0]])
         boxes *= scale
 
         _t['misc'].tic()
@@ -129,10 +138,11 @@ def val(net, detector, priors, num_classes, val_dataset, transform, save_folder,
                 continue
             c_bboxes = boxes[inds]
             c_scores = scores[inds, j]
-            c_dets = np.hstack((c_bboxes, c_scores[:, np.newaxis])).astype(
-                np.float32, copy=False)
+            c_dets = np.hstack((c_bboxes, c_scores[:, np.newaxis])).astype(np.float32, copy=False)
 
-            keep = nms(c_dets, 0.45, force_cpu=True, soft_nms=False)
+            # from src.utils.nms.py_cpu_nms import py_cpu_nms
+            # keep = py_cpu_nms(c_dets, 0.45)
+            keep = nms(c_dets, 0.45, force_cpu=enable_cuda)
             keep = keep[:50]
             c_dets = c_dets[keep, :]
             all_boxes[j][i] = c_dets
@@ -196,8 +206,8 @@ if __name__ == '__main__':
     elif dataset == "COCO":
         val_dataset = COCODet(root_path, val_sets, None)
 
-    # val_bak(net, detector, priors, num_classes, val_dataset, val_trainsform, workspace, ckpt_path=ckpt_path, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005)
-    val(net, detector, priors, num_classes, val_dataset, val_trainsform, workspace, ckpt_path=ckpt_path, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005)
+    val_bak(net, detector, priors, num_classes, val_dataset, val_trainsform, workspace, ckpt_path=ckpt_path, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005)
+    # val(net, detector, priors, num_classes, val_dataset, val_trainsform, workspace, ckpt_path=ckpt_path, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005)
 
     # resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/v1/refineDet-model-50.pth'
     # resume_net_path = 'workspace/v2/refineDet-model-280.pth'

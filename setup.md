@@ -200,6 +200,8 @@ CUDA_VISIBLE_DEVICES=0 python refinedet_mobile_val.py --dataset COCO --gpu_ids 0
 train v1:
 INFO:root:[56/120] || total_loss: 2.4257(mean_arm_loc_loss: 1.7216 mean_arm_cls_loss: 2.0315 mean_obm_loc_loss: 0.9019 mean_obm_cls_loss: 1.3022) || Batch time: 0.0119 sec. || LR: 0.000828
 
+INFO:root:[288/1350] || total_loss: 1.6948(mean_arm_loc_loss: 0.7423 mean_arm_cls_loss: 1.4481 mean_obm_loc_loss: 0.6348 mean_obm_cls_loss: 0.8612) || Batch time: 0.0060 sec. || LR: 0.000116
+
 ### troubleshoot
 
 #### pyinn
