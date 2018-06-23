@@ -30,7 +30,7 @@ from src.symbol.RefineSSD_vgg import build_net
 from src.symbol.RefineSSD_mobilenet_v2 import RefineSSDMobileNet
 
 
-def val_bak(net, detector, priors, num_classes, val_dataset, transform, save_folder, ckpt_path=None, enable_cuda=False, max_per_image=300, thresh=0.005):
+def val(net, detector, priors, num_classes, val_dataset, transform, save_folder, ckpt_path=None, enable_cuda=False, max_per_image=300, thresh=0.005):
 
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
@@ -95,7 +95,7 @@ def val_bak(net, detector, priors, num_classes, val_dataset, transform, save_fol
     val_dataset.evaluate_detections(all_boxes, save_folder)
 
 
-def val(net, detector, priors, num_classes, val_dataset, transform, save_folder, ckpt_path=None, enable_cuda=False, max_per_image=300, thresh=0.005):
+def val_scratch(net, detector, priors, num_classes, val_dataset, transform, save_folder, ckpt_path=None, enable_cuda=False, max_per_image=300, thresh=0.005):
 
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
@@ -206,7 +206,7 @@ if __name__ == '__main__':
     elif dataset == "COCO":
         val_dataset = COCODet(root_path, val_sets, None)
 
-    val_bak(net, detector, priors, num_classes, val_dataset, val_trainsform, workspace, ckpt_path=ckpt_path, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005)
+    val(net, detector, priors, num_classes, val_dataset, val_trainsform, workspace, ckpt_path=ckpt_path, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005)
     # val(net, detector, priors, num_classes, val_dataset, val_trainsform, workspace, ckpt_path=ckpt_path, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005)
 
     # resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/v1/refineDet-model-50.pth'

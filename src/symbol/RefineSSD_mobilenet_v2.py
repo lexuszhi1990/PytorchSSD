@@ -97,19 +97,19 @@ class RefineSSDMobileNet(nn.Module):
         self.base_channel_list = [ int(width_mult*num) for num in [32, 64, 160, 320] ]
         self.base_mbox = 3
         self.base = nn.ModuleList(build_mobile_net_v2(width_mult=width_mult))
-        self.arm_loc = nn.ModuleList([
-                nn.Conv2d(512, 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
-                nn.Conv2d(512, 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
-                nn.Conv2d(1024, 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
-                nn.Conv2d(512, 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
-            ])
-        self.arm_conf = nn.ModuleList([
-                nn.Conv2d(512, 2*self.base_mbox, kernel_size=3, stride=1, padding=1), \
-                nn.Conv2d(512, 2*self.base_mbox, kernel_size=3, stride=1, padding=1), \
-                nn.Conv2d(1024, 2*self.base_mbox, kernel_size=3, stride=1, padding=1), \
-                nn.Conv2d(512, 2*self.base_mbox, kernel_size=3, stride=1, padding=1), \
-            ])
-
+        if self.use_refine:
+            self.arm_loc = nn.ModuleList([
+                    nn.Conv2d(self.base_channel_list[0], 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                    nn.Conv2d(self.base_channel_list[1], 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                    nn.Conv2d(self.base_channel_list[2], 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                    nn.Conv2d(self.base_channel_list[3], 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                ])
+            self.arm_conf = nn.ModuleList([
+                    nn.Conv2d(self.base_channel_list[0], 2*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                    nn.Conv2d(self.base_channel_list[1], 2*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                    nn.Conv2d(self.base_channel_list[2], 2*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                    nn.Conv2d(self.base_channel_list[3], 2*self.base_mbox, kernel_size=3, stride=1, padding=1),
+                ])
         self.odm_loc = nn.ModuleList([
                 nn.Conv2d(self.base_channel_num, 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
                 nn.Conv2d(self.base_channel_num, 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
@@ -124,9 +124,9 @@ class RefineSSDMobileNet(nn.Module):
             ])
 
         self.appended_layer = nn.Sequential(
-                nn.Conv2d(self.base_channel_list[3], self.base_channel_num * 2, kernel_size=1, stride=1, padding=0),
+                nn.Conv2d(self.base_channel_list[3], self.base_channel_list[3] * 2, kernel_size=1, stride=1, padding=0),
                 nn.ReLU6(inplace=True),
-                nn.Conv2d(self.base_channel_num * 2, self.base_channel_num, kernel_size=3, stride=2, padding=1),
+                nn.Conv2d(self.base_channel_list[3] * 2, self.base_channel_list[3], kernel_size=3, stride=2, padding=1),
                 nn.ReLU6(inplace=True)
             )
         self.trans_layers = nn.ModuleList([
@@ -149,13 +149,13 @@ class RefineSSDMobileNet(nn.Module):
                 ),
 
                 nn.Sequential(
-                    nn.Conv2d(self.base_channel_num, self.base_channel_num, kernel_size=3, stride=1, padding=1),
+                    nn.Conv2d(self.base_channel_list[3], self.base_channel_num, kernel_size=3, stride=1, padding=1),
                     nn.ReLU6(inplace=True),
                     nn.Conv2d(self.base_channel_num, self.base_channel_num, kernel_size=3, stride=1, padding=1),
                 )
             ])
         self.up_layers = nn.ModuleList([
-                nn.ConvTranspose2d(self.base_channel_num, self.base_channel_num, kernel_size=3, stride=1, padding=1),
+                nn.ConvTranspose2d(self.base_channel_list[3], self.base_channel_num, kernel_size=3, stride=1, padding=1),
                 nn.ConvTranspose2d(self.base_channel_num, self.base_channel_num, kernel_size=2, stride=2, padding=0),
                 nn.ConvTranspose2d(self.base_channel_num, self.base_channel_num, kernel_size=2, stride=2, padding=0),
                 nn.ConvTranspose2d(self.base_channel_num, self.base_channel_num, kernel_size=2, stride=2, padding=0),

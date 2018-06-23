@@ -18,6 +18,71 @@ cd src/utils
 python build.py build_ext --inplace
 ```
 
+### troubleshoot
+
+#### pyinn
+
+from pyinn.modules import Conv2dDepthwise
+
+`pip install git+https://github.com/szagoruyko/pyinn.git@master`
+
+#### torch dataloader
+
+```
+/usr/local/lib/python3.6/site-packages/torch/autograd/_functions/tensor.py:447: UserWarning: mask is not broadcastable to self, but they have the same number of elements.  Falling back to deprecated pointwise behavior.
+  return tensor.masked_fill_(mask, value)
+Epoch:1 || epochiter: 0/14785|| Totel iter 0 || L: 0.3921 C: 2.5372||Batch time: 6.4400 sec. ||LR: 0.00400000
+Traceback (most recent call last):
+  File "train_test.py", line 459, in <module>
+    train()
+  File "train_test.py", line 307, in train
+    images, targets = next(batch_iterator)
+  File "/usr/local/lib/python3.6/site-packages/torch/utils/data/dataloader.py", line 204, in __next__
+    idx, batch = self.data_queue.get()
+  File "/usr/local/lib/python3.6/multiprocessing/queues.py", line 344, in get
+    return _ForkingPickler.loads(res)
+  File "/usr/local/lib/python3.6/site-packages/torch/multiprocessing/reductions.py", line 70, in rebuild_storage_fd
+    fd = df.detach()
+  File "/usr/local/lib/python3.6/multiprocessing/resource_sharer.py", line 57, in detach
+    with _resource_sharer.get_connection(self._id) as conn:
+  File "/usr/local/lib/python3.6/multiprocessing/resource_sharer.py", line 87, in get_connection
+    c = Client(address, authkey=process.current_process().authkey)
+  File "/usr/local/lib/python3.6/multiprocessing/connection.py", line 487, in Client
+    c = SocketClient(address)
+  File "/usr/local/lib/python3.6/multiprocessing/connection.py", line 614, in SocketClient
+    s.connect(address)
+ConnectionRefusedError: [Errno 111] Connection refused
+```
+
+https://github.com/pytorch/pytorch#docker-image
+http://noahsnail.com/2018/01/15/2018-01-15-PyTorch%20socket.error%20[Errno%20111]%20Connection%20refused/
+
+
+#### data training
+
+```
+Traceback (most recent call last):
+  File "train_test.py", line 456, in <module>
+    train()
+  File "train_test.py", line 307, in train
+    images, targets = next(batch_iterator)
+  File "/usr/local/lib/python3.6/site-packages/torch/utils/data/dataloader.py", line 196, in __next__
+    return self._process_next_batch(batch)
+  File "/usr/local/lib/python3.6/site-packages/torch/utils/data/dataloader.py", line 230, in _process_next_batch
+    raise batch.exc_type(batch.exc_msg)
+AttributeError: Traceback (most recent call last):
+  File "/usr/local/lib/python3.6/site-packages/torch/utils/data/dataloader.py", line 42, in _worker_loop
+    samples = collate_fn([dataset[i] for i in batch_indices])
+  File "/usr/local/lib/python3.6/site-packages/torch/utils/data/dataloader.py", line 42, in <listcomp>
+    samples = collate_fn([dataset[i] for i in batch_indices])
+  File "/app/data/coco.py", line 167, in __getitem__
+    height, width, _ = img.shape
+AttributeError: 'NoneType' object has no attribute 'shape'
+```
+
+solution: `./make.sh`
+
+
 ### daily log
 
 #### 2018.5.16
@@ -202,66 +267,10 @@ INFO:root:[56/120] || total_loss: 2.4257(mean_arm_loc_loss: 1.7216 mean_arm_cls_
 
 INFO:root:[288/1350] || total_loss: 1.6948(mean_arm_loc_loss: 0.7423 mean_arm_cls_loss: 1.4481 mean_obm_loc_loss: 0.6348 mean_obm_cls_loss: 0.8612) || Batch time: 0.0060 sec. || LR: 0.000116
 
-### troubleshoot
 
-#### pyinn
+#### 2018.6.24
 
-from pyinn.modules import Conv2dDepthwise
+CUDA_VISIBLE_DEVICES=4,5 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v3 --config_id v3
 
-`pip install git+https://github.com/szagoruyko/pyinn.git@master`
+CUDA_VISIBLE_DEVICES=6,7 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4 --config_id v4
 
-#### torch dataloader
-
-```
-/usr/local/lib/python3.6/site-packages/torch/autograd/_functions/tensor.py:447: UserWarning: mask is not broadcastable to self, but they have the same number of elements.  Falling back to deprecated pointwise behavior.
-  return tensor.masked_fill_(mask, value)
-Epoch:1 || epochiter: 0/14785|| Totel iter 0 || L: 0.3921 C: 2.5372||Batch time: 6.4400 sec. ||LR: 0.00400000
-Traceback (most recent call last):
-  File "train_test.py", line 459, in <module>
-    train()
-  File "train_test.py", line 307, in train
-    images, targets = next(batch_iterator)
-  File "/usr/local/lib/python3.6/site-packages/torch/utils/data/dataloader.py", line 204, in __next__
-    idx, batch = self.data_queue.get()
-  File "/usr/local/lib/python3.6/multiprocessing/queues.py", line 344, in get
-    return _ForkingPickler.loads(res)
-  File "/usr/local/lib/python3.6/site-packages/torch/multiprocessing/reductions.py", line 70, in rebuild_storage_fd
-    fd = df.detach()
-  File "/usr/local/lib/python3.6/multiprocessing/resource_sharer.py", line 57, in detach
-    with _resource_sharer.get_connection(self._id) as conn:
-  File "/usr/local/lib/python3.6/multiprocessing/resource_sharer.py", line 87, in get_connection
-    c = Client(address, authkey=process.current_process().authkey)
-  File "/usr/local/lib/python3.6/multiprocessing/connection.py", line 487, in Client
-    c = SocketClient(address)
-  File "/usr/local/lib/python3.6/multiprocessing/connection.py", line 614, in SocketClient
-    s.connect(address)
-ConnectionRefusedError: [Errno 111] Connection refused
-```
-
-https://github.com/pytorch/pytorch#docker-image
-http://noahsnail.com/2018/01/15/2018-01-15-PyTorch%20socket.error%20[Errno%20111]%20Connection%20refused/
-
-
-#### data training
-
-```
-Traceback (most recent call last):
-  File "train_test.py", line 456, in <module>
-    train()
-  File "train_test.py", line 307, in train
-    images, targets = next(batch_iterator)
-  File "/usr/local/lib/python3.6/site-packages/torch/utils/data/dataloader.py", line 196, in __next__
-    return self._process_next_batch(batch)
-  File "/usr/local/lib/python3.6/site-packages/torch/utils/data/dataloader.py", line 230, in _process_next_batch
-    raise batch.exc_type(batch.exc_msg)
-AttributeError: Traceback (most recent call last):
-  File "/usr/local/lib/python3.6/site-packages/torch/utils/data/dataloader.py", line 42, in _worker_loop
-    samples = collate_fn([dataset[i] for i in batch_indices])
-  File "/usr/local/lib/python3.6/site-packages/torch/utils/data/dataloader.py", line 42, in <listcomp>
-    samples = collate_fn([dataset[i] for i in batch_indices])
-  File "/app/data/coco.py", line 167, in __getitem__
-    height, width, _ = img.shape
-AttributeError: 'NoneType' object has no attribute 'shape'
-```
-
-solution: `./make.sh`
