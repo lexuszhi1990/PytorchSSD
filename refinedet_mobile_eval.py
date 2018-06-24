@@ -3,6 +3,7 @@
 import sys
 import os
 import time
+import logging
 import cv2
 import numpy as np
 import argparse
@@ -22,207 +23,83 @@ import torch.utils.data as data
 from src.config import config
 from src.data.data_augment import detection_collate, BaseTransform, preproc
 from src.data.coco import COCODet
-from src.symbol.RefineSSD_vgg import build_net
-from src.loss import RefineMultiBoxLoss
-from src.detection import Detect
+from src.loss import RefineMultiBoxLoss, MultiBoxLoss
+from src.detector import Detector
 from src.prior_box import PriorBox
-from src.utils import str2bool
 from src.utils.nms_wrapper import nms
+from src.utils import setup_logger, kaiming_weights_init
+from src.utils.args import get_args
 from src.utils.timer import Timer
 
-parser = argparse.ArgumentParser(
-    description='Refined SSD eval')
-parser.add_argument('--workspace', default='./workspace')
-parser.add_argument('--shape', default='320', help='320 or 512 input size.')
-parser.add_argument('--dataset', default='COCO', help='VOC or COCO dataset')
-parser.add_argument('--batch_size', default=32, type=int, help='Batch size for training')
-parser.add_argument('--cuda', action="store_true", default=False, help='Use cuda to train model')
-parser.add_argument('--gpu_ids', nargs='+', default=[], help='gpu id')
-parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float, help='initial learning rate')
-parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
-parser.add_argument('--gamma', default=0.1, type=float, help='Gamma update for SGD')
-parser.add_argument('--weight_decay', default=5e-4, type=float, help='Weight decay for SGD')
-parser.add_argument('--resume', default=False, help='resume net for retraining')
-parser.add_argument('--resume_epoch', default=0, type=int, help='resume iter for retraining')
-parser.add_argument('--max_epoch', default=300, type=int, help='max epoch for retraining')
-parser.add_argument('--save_frequency', default=10, type=int, help='epoch for saving ckpt')
-parser.add_argument('--jaccard_threshold', default=0.5, type=float, help='Min Jaccard index for matching')
-parser.add_argument('--num_workers', default=4, type=int, help='Number of workers used in dataloading')
-parser.add_argument('--visdom', default=False, type=str2bool, help='Use visdom to for loss visualization')
-parser.add_argument('--basenet', default='./weights/pretrained/vgg16_reducedfc.pth', help='pretrained base model')
-
-parser.add_argument('--warm_epoch', default=1,
-                    type=int, help='max epoch for retraining')
-parser.add_argument('--date', default='0327')
-parser.add_argument('--retest', default=False, type=bool,
-                    help='test cache results')
-parser.add_argument('--test_frequency',default=10)
-parser.add_argument('--send_images_to_visdom', type=str2bool, default=False, help='Sample a random image from each 10th batch, send it to visdom after augmentations step')
+from src.symbol.RefineSSD_vgg import build_net
+from src.symbol.RefineSSD_mobilenet_v2 import RefineSSDMobileNet
 
 if __name__ == '__main__':
 
-    args = parser.parse_args()
+    args = get_args()
     workspace = args.workspace
-    batch_size = args.batch_size
-    shape = args.shape
-    dataset = args.dataset
-    base_lr = args.lr
-    warm_epoch = args.warm_epoch
-    max_epoch = args.max_epoch
-    resume = args.resume
-    resume_epoch = args.resume_epoch
-    momentum = args.momentum
-    weight_decay = args.weight_decay
-    gamma = args.gamma
-    num_workers = args.num_workers
-    save_frequency = args.save_frequency
-    basenet = args.basenet
-    enable_visdom = args.visdom
+    shape = int(args.shape)
+    image_path = args.eval_img
+    ckpt_path = args.ckpt_path
+    top_k = args.top_k
+    nms_thresh = args.nms_thresh
+    confidence_thresh = args.confidence_thresh
+
     gpu_ids = [int(i) for i in args.gpu_ids]
     enable_cuda = args.cuda and torch.cuda.is_available() and len(gpu_ids) > 0
     if enable_cuda:
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
         cudnn.benchmark = True
 
-    if dataset == "COCO":
-        basic_conf = config.coco
-    elif dataset == "VOC":
-        basic_conf = config.voc
-    else:
-        raise RuntimeError("not support dataset %s" % (dataset))
+    setup_logger(workspace)
 
-    root_path, train_sets, val_sets = basic_conf.root_path,  basic_conf.train_sets, basic_conf.val_sets
-    num_classes, img_dim, rgb_means, rgb_std, augment_ratio = basic_conf.num_classes, basic_conf.img_dim, basic_conf.rgb_means, basic_conf.rgb_std, basic_conf.augment_ratio
-    module_cfg = getattr(basic_conf, "dimension_%d"%(int(shape)))
-
-    resume_net_path = 'workspace/v2/refineDet-model-110.pth'
-
-    net = build_net(int(shape), num_classes, use_refine=True)
-    state_dict = torch.load(resume_net_path)
-    new_state_dict = OrderedDict()
-    for k, v in state_dict.items():
-        head = k[:7]
-        if head == 'module.':
-            name = k[7:] # remove `module.`
-        else:
-            name = k
-        new_state_dict[name] = v
-    net.load_state_dict(new_state_dict)
-    print(net)
-
+    basic_conf = config.coco
+    module_cfg = basic_conf.list[args.config_id]
+    val_trainsform = BaseTransform(module_cfg['shape'], basic_conf.rgb_means, basic_conf.rgb_std, (2, 0, 1))
     priorbox = PriorBox(module_cfg)
     priors = Variable(priorbox.forward(), volatile=True)
-    detector = Detect(num_classes, 0, module_cfg, object_score=0.01)
-    val_dataset = COCODet(root_path, val_sets, None)
-    val_trainsform = BaseTransform(net.size, rgb_means, rgb_std, (2, 0, 1))
+    detector = Detector(basic_conf.num_classes, top_k=module_cfg['top_k'], conf_thresh=module_cfg['confidence_thresh'], nms_thresh=module_cfg['nms_thresh'], variance=module_cfg['variance'])
 
-    img = cv2.imread('./samples/demo/1045023827_4ec3e8ba5c_z.jpg')
+    net = RefineSSDMobileNet(shape, basic_conf.num_classes, base_channel_num=module_cfg['base_channel_num'], width_mult=module_cfg['width_mult'], use_refine=module_cfg['use_refine'])
+    net.initialize_weights(ckpt_path)
+    if enable_cuda and len(gpu_ids) > 0:
+        net = torch.nn.DataParallel(net, device_ids=gpu_ids)
+        net.cuda()
+
+    img = cv2.imread(image_path)
     x = Variable(val_trainsform(img).unsqueeze(0), volatile=True)
     if enable_cuda:
         x = x.cuda()
+    basic_scale = [img.shape[1], img.shape[0], img.shape[1], img.shape[0]]
 
     _t = {'im_detect': Timer(), 'misc': Timer()}
-    _t['im_detect'].tic()
-    arm_loc, arm_conf, odm_loc, odm_conf = net(x=x, test=True)
-    boxes, scores = detector.forward((odm_loc, odm_conf), priors, (arm_loc, arm_conf))
-    detect_time = _t['im_detect'].toc()
-    print("forward time: %fs" % (detect_time))
-    boxes = boxes[0]
-    scores=scores[0]
-    boxes = boxes.cpu().numpy()
-    scores = scores.cpu().numpy()
-    # scale each detection back up to the image
-    scale = torch.Tensor([img.shape[1], img.shape[0], img.shape[1], img.shape[0]]).cpu().numpy()
-    boxes *= scale
+    # _t['im_detect'].tic()
+    forward_starts = time.time()
+    out = net(x=x, inference=True)  # forward pass
+    # detect_time = _t['im_detect'].toc()
+    detect_time = time.time() - forward_starts
 
-    all_boxes = [[] for _ in range(num_classes)]
-    for class_id in range(1, num_classes):
-        inds = np.where(scores[:, class_id] > 0.95)[0]
-        c_scores = scores[inds, class_id]
-        c_bboxes = boxes[inds]
-        c_dets = np.hstack((c_bboxes, c_scores[:, np.newaxis])).astype(np.float32, copy=False)
-        keep = nms(c_dets, 0.45, force_cpu=True)
-        all_boxes[class_id] = c_dets[keep, :]
+    forward_starts = time.time()
+    out = net(x=x, inference=True)  # forward pass
+    # detect_time = _t['im_detect'].toc()
+    detect_time = time.time() - forward_starts
 
-    img_det = img.copy()
-    for class_id in range(1, num_classes):
-        for det in all_boxes[class_id]:
-            left, top, right, bottom, score = det
+    print(detect_time)
+
+    _t['misc'].tic()
+    arm_loc, arm_conf, odm_loc, odm_conf = out
+    output = detector.forward((odm_loc, odm_conf), priors, (arm_loc, arm_conf))
+    nms_time = _t['misc'].toc()
+
+    output_np = output.cpu().numpy()
+
+    for class_id in range(1, basic_conf.num_classes):
+        cls_outut = output_np[class_id]
+        dets = cls_outut[cls_outut[:, 1] > 0.25]
+        dets[:, 2:6] = np.floor(dets[:, 2:6] * basic_scale)
+        for det in dets:
+            cls_id, score, left, top, right, bottom = det
             img_det = cv2.rectangle(img, (left, top), (right, bottom), (255, 255, 0), 1)
             img_det = cv2.putText(img_det, '%d:%.3f'%(class_id, score), (int(left), int(top)+15), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 1)
-
-    cv2.imwrite("./test_3.png", img_det)
-
-
-
-
-
-    # args = parser.parse_args()
-    # save_folder = os.path.join(args.save_folder, args.version+'_'+args.size, args.date)
-    # enable_cuda = args.cuda and torch.cuda.is_available()
-    # if enable_cuda:
-    #     torch.set_default_tensor_type('torch.cuda.FloatTensor')
-    #     cudnn.benchmark = True
-    # num_classes = 81
-    # data_shape = 320
-    # resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/refinedet_vgg_0516/Refine_vgg_COCO_epoches_250.pth'
-
-    # net = build_net(data_shape, num_classes, use_refine=True)
-    # # https://pytorch.org/docs/master/torch.html?highlight=load#torch.load
-    # # state_dict = torch.load(resume_net_path)
-    # state_dict = torch.load(resume_net_path, lambda storage, loc: storage)
-    # new_state_dict = OrderedDict()
-    # for k, v in state_dict.items():
-    #     head = k[:7]
-    #     if head == 'module.':
-    #         name = k[7:] # remove `module.`
-    #     else:
-    #         name = k
-    #     new_state_dict[name] = v
-    # net.load_state_dict(new_state_dict)
-
-    # module_cfg = config.coco.dimension_320
-    # rgb_std = (1,1,1)
-    # rgb_means = (104, 117, 123)
-    # priorbox = PriorBox(module_cfg)
-    # priors = Variable(priorbox.forward(), volatile=True)
-    # detector = Detect(num_classes, 0, module_cfg, object_score=0.01)
-    # val_trainsform = BaseTransform(net.size, rgb_means, rgb_std, (2, 0, 1))
-
-
-    # img = cv2.imread('./samples/ebike-three.jpg')
-    # x = Variable(val_trainsform(img).unsqueeze(0), volatile=True)
-    # if enable_cuda:
-    #     x = x.cuda()
-
-    # _t = {'im_detect': Timer(), 'misc': Timer()}
-    # _t['im_detect'].tic()
-    # arm_loc, arm_conf, odm_loc, odm_conf = net(x=x, test=True)
-    # boxes, scores = detector.forward((odm_loc, odm_conf), priors, (arm_loc, arm_conf))
-    # detect_time = _t['im_detect'].toc()
-    # print("forward time: %fs" % (detect_time))
-    # boxes = boxes[0]
-    # scores=scores[0]
-    # boxes = boxes.cpu().numpy()
-    # scores = scores.cpu().numpy()
-    # # scale each detection back up to the image
-    # scale = torch.Tensor([img.shape[1], img.shape[0], img.shape[1], img.shape[0]]).cpu().numpy()
-    # boxes *= scale
-
-    # all_boxes = [[] for _ in range(num_classes)]
-    # for class_id in range(1, num_classes):
-    #     inds = np.where(scores[:, class_id] > 0.95)[0]
-    #     c_scores = scores[inds, class_id]
-    #     c_bboxes = boxes[inds]
-    #     c_dets = np.hstack((c_bboxes, c_scores[:, np.newaxis])).astype(np.float32, copy=False)
-    #     keep = nms(c_dets, 0.45, force_cpu=True)
-    #     all_boxes[class_id] = c_dets[keep, :]
-
-    # img_det = img.copy()
-    # for class_id in range(1, num_classes):
-    #     for det in all_boxes[class_id]:
-    #         left, top, right, bottom, score = det
-    #         img_det = cv2.rectangle(img, (left, top), (right, bottom), (255, 255, 0), 1)
-    #         img_det = cv2.putText(img_det, '%d:%.3f'%(class_id, score), (int(left), int(top)+15), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 1)
-
-    # cv2.imwrite("./test_3.png", img_det)
+    cv2.imwrite("./test_v4.png", img_det)
+    logging.info('im_detect: %s, detect_time:%.3fs nms_time:%.3fs'%(image_path, detect_time, nms_time))

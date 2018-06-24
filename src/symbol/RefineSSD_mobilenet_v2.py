@@ -194,7 +194,7 @@ class RefineSSDMobileNet(nn.Module):
                 else:
                     name = k
                 new_state_dict[name] = v
-            net.load_state_dict(new_state_dict)
+            self.load_state_dict(new_state_dict)
             logging.info("load weights from %s" % ckpt_path)
         else:
             self.initialize_base_weights()

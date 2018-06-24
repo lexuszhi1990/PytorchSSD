@@ -27,10 +27,14 @@ def get_args():
     parser.add_argument('--weight_decay', default=5e-4, type=float, help='Weight decay for SGD')
     parser.add_argument('--max_epoch', default=200, type=int, help='max epoch for retraining')
 
-    # for nms
+    # nms
     parser.add_argument('--top_k', default=200, type=int, help='Number of roi used for nms')
     parser.add_argument('--nms_thresh', default=0.45, type=float, help='nms threshold')
     parser.add_argument('--confidence_thresh', default=0.01, type=float, help='confidence threshold for filtering the roi')
+
+    # eval
+    parser.add_argument('--eval_img', type=str, default='None', help='validate image')
+
 
     # desperate
     parser.add_argument('--shape', default='320', help='320 or 512 input size.')

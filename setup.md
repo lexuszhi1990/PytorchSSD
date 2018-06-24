@@ -274,3 +274,16 @@ CUDA_VISIBLE_DEVICES=4,5 python refinedet_mobile_train.py --dataset COCO --gpu_i
 
 CUDA_VISIBLE_DEVICES=6,7 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4 --config_id v4
 
+
+CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --config_id v3 --gpu_ids 0 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v3/ss_predict --shape 320 --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v3/refinedet_model-190.pth --eval_img ./samples/demo/1045023827_4ec3e8ba5c_z.jpg
+
+CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --config_id v3 --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v3/ss_predict --shape 320 --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v3/refinedet_model-190.pth --eval_img ./samples/demo/1045023827_4ec3e8ba5c_z.jpg
+
+CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --config_id v4 --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4/ss_predict --shape 320 --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4/refinedet_model-190.pth --eval_img ./samples/demo/1045023827_4ec3e8ba5c_z.jpg
+
+CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --config_id v4 --gpu_ids 0 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4/ss_predict --shape 320 --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4/refinedet_model-190.pth --eval_img ./samples/demo/1045023827_4ec3e8ba5c_z.jpg
+
+
+
+
+
