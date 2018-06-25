@@ -169,7 +169,7 @@ config.coco.dimension_320 = {
     'base_channel_num': 128,
 }
 
-config.coco.list = {
+config.list = {
     "v1" : {
         'feature_maps': [40, 20, 10, 5],
         'min_dim': 320,
@@ -261,4 +261,59 @@ config.coco.list = {
         'confidence_thresh': 0.01,
         'nms_thresh': 0.45,
     },
+    "v5" : {
+        'feature_maps': [40, 20, 10, 5],
+        'min_dim': 320,
+        'steps': [8, 16, 32, 64],
+        'min_sizes': [32, 64, 128, 256],
+        'max_sizes': [],
+        'aspect_ratios': [[2], [2], [2], [2]],
+        'variance': [0.1, 0.2],
+        'clip': True,
+
+        'width_mult': 0.5,
+        'base_channel_num': 128,
+        'use_refine': True,
+        'batch_size': 192,
+        'num_workers': 36,
+        'shape': 320,
+        'base_lr': 6e-2,
+        'momentum': 0.9,
+        'weight_decay': 5e-4,
+        'gamma': 0.1,
+        'max_epoch': 201,
+
+        'top_k': 200,
+        'confidence_thresh': 0.01,
+        'nms_thresh': 0.45,
+    },
+
+    "v6" : {
+        'feature_maps': [40, 20, 10, 5],
+        'min_dim': 320,
+        'shape': [320, 320], # [width, height]
+        'steps': [8, 16, 32, 64],
+        'min_sizes': [32, 64, 128, 256],
+        'max_sizes': [],
+        # 'aspect_ratios': [[2], [2], [2], [2]],
+        'aspect_ratios': [[2, 3], [2, 3], [2, 3], [2, 3]],
+        'variance': [0.1, 0.2],
+        'clip': True,
+
+        'width_mult': 0.75,
+        'base_channel_num': 128,
+        'use_refine': True,
+        'batch_size': 192,
+        'num_workers': 36,
+        'base_lr': 4e-2,
+        'momentum': 0.9,
+        'weight_decay': 5e-4,
+        'gamma': 0.1,
+        'max_epoch': 200,
+
+        'top_k': 200,
+        'confidence_thresh': 0.01,
+        'nms_thresh': 0.45,
+    },
+
 }

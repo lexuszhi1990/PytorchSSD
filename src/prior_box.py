@@ -33,6 +33,7 @@ class PriorBox(object):
         mean = []
         for k, f in enumerate(self.feature_maps):
             for i, j in product(range(f), repeat=2):
+                # [(i, j) for i, j in product(range(f), range(f))]
                 f_k = self.image_size / self.steps[k]
                 cx = (j + 0.5) / f_k
                 cy = (i + 0.5) / f_k

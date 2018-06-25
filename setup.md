@@ -267,7 +267,6 @@ INFO:root:[56/120] || total_loss: 2.4257(mean_arm_loc_loss: 1.7216 mean_arm_cls_
 
 INFO:root:[288/1350] || total_loss: 1.6948(mean_arm_loc_loss: 0.7423 mean_arm_cls_loss: 1.4481 mean_obm_loc_loss: 0.6348 mean_obm_cls_loss: 0.8612) || Batch time: 0.0060 sec. || LR: 0.000116
 
-
 #### 2018.6.24
 
 CUDA_VISIBLE_DEVICES=4,5 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v3 --config_id v3
@@ -283,7 +282,7 @@ CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --config_id v4 --workspac
 
 CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --config_id v4 --gpu_ids 0 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4/ss_predict --shape 320 --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4/refinedet_model-190.pth --eval_img ./samples/demo/1045023827_4ec3e8ba5c_z.jpg
 
+#### 2018.6.25
 
-
-
+CUDA_VISIBLE_DEVICES=6,7 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v5 --config_id v5
 

@@ -67,7 +67,7 @@ def train(workspace, train_dataset, val_dataset, val_trainsform, priors, detecto
 
     # optimizer = optim.RMSprop(net.parameters(), lr=base_lr, alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
     optimizer = optim.SGD(net.parameters(), lr=base_lr, momentum=momentum, weight_decay=weight_decay)
-    scheduler = MultiStepLR(optimizer, milestones=[ i*6 for i in range(1, max_epoch//6) ], gamma=0.65)
+    scheduler = MultiStepLR(optimizer, milestones=[ i*6 for i in range(1, max_epoch//6) ], gamma=0.75)
     for epoch in range(max_epoch):
         net.train()
         scheduler.step()
@@ -112,7 +112,9 @@ def train(workspace, train_dataset, val_dataset, val_trainsform, priors, detecto
             val(net, detector, priors, num_classes, val_dataset, val_trainsform, val_results_path, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005)
             net.train()
 
-    torch.save(net.state_dict(), workspace_path.joinpath("Final-refineDet-%d.pth" %(epoch)).as_posix())
+    final_model_path = workspace_path.joinpath("Final-refineDet-%d.pth" %(epoch)).as_posix()
+    torch.save(net.state_dict(), final_model_path)
+    logging.info("save final model to %s " % final_model_path)
 
 if __name__ == '__main__':
 
@@ -159,7 +161,7 @@ if __name__ == '__main__':
         raise RuntimeError("not support dataset %s" % (dataset))
     root_path, train_sets, val_sets, num_classes, img_dim, rgb_means, rgb_std, augment_ratio = basic_conf.root_path, basic_conf.train_sets, basic_conf.val_sets, basic_conf.num_classes, basic_conf.img_dim, basic_conf.rgb_means, basic_conf.rgb_std, basic_conf.augment_ratio
 
-    module_cfg = basic_conf.list[args.config_id]
+    module_cfg = config.list[args.config_id]
     val_trainsform = BaseTransform(module_cfg['shape'], rgb_means, rgb_std, (2, 0, 1))
     priorbox = PriorBox(module_cfg)
     priors = Variable(priorbox.forward(), volatile=True)
