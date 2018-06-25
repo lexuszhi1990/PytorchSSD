@@ -2,6 +2,8 @@ import time
 import torch
 from torch.autograd import Variable
 
+
+from src.symbol.RefineSSD_mobilenet_v2 import RefineSSDMobileNet
 from src.symbol.RefineSSD_vgg import RefineSSD
 
 model = RefineSSD(size=320, num_classes=81, use_refine=True)

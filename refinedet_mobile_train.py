@@ -50,7 +50,7 @@ def train(workspace, train_dataset, val_dataset, val_trainsform, priors, detecto
     log_file_path = workspace_path.joinpath("train-%s" % (shape))
     setup_logger(log_file_path.as_posix())
 
-    net = RefineSSDMobileNet(shape, num_classes, base_channel_num=base_channel_num, width_mult=width_mult, use_refine=use_refine)
+    net = RefineSSDMobileNet(num_classes, base_channel_num=base_channel_num, width_mult=width_mult, use_refine=use_refine)
     net.initialize_weights()
     logging.info(net)
 

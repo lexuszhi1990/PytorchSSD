@@ -274,10 +274,10 @@ config.list = {
         'width_mult': 0.5,
         'base_channel_num': 128,
         'use_refine': True,
-        'batch_size': 192,
-        'num_workers': 36,
+        'batch_size': 256,
+        'num_workers': 64,
         'shape': 320,
-        'base_lr': 6e-2,
+        'base_lr': 8e-2,
         'momentum': 0.9,
         'weight_decay': 5e-4,
         'gamma': 0.1,
@@ -290,12 +290,11 @@ config.list = {
 
     "v6" : {
         'feature_maps': [40, 20, 10, 5],
-        'min_dim': 320,
-        'shape': [320, 320], # [width, height]
+        # 'min_dim': 320,
+        'shape': [480, 270], # [width, height]
         'steps': [8, 16, 32, 64],
         'min_sizes': [32, 64, 128, 256],
         'max_sizes': [],
-        # 'aspect_ratios': [[2], [2], [2], [2]],
         'aspect_ratios': [[2, 3], [2, 3], [2, 3], [2, 3]],
         'variance': [0.1, 0.2],
         'clip': True,

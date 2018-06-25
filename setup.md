@@ -239,7 +239,6 @@ person 32%
 
 CUDA_VISIBLE_DEVICES=0 python refinedet_mobile_val.py --dataset COCO --gpu_ids 0 --cuda --confidence_thresh 0.01 --top_k 200 --nms_thresh 0.45 --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v2/refinedet_model-40.pth
 
-
 CUDA_VISIBLE_DEVICES=5 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 --cuda --batch_size 128 --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/scratch-v3 --num_workers 8 --basenet None --lr 0.004
 
 scratch-v2: no arm branch, width 0.5
@@ -273,7 +272,6 @@ CUDA_VISIBLE_DEVICES=4,5 python refinedet_mobile_train.py --dataset COCO --gpu_i
 
 CUDA_VISIBLE_DEVICES=6,7 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4 --config_id v4
 
-
 CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --config_id v3 --gpu_ids 0 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v3/ss_predict --shape 320 --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v3/refinedet_model-190.pth --eval_img ./samples/demo/1045023827_4ec3e8ba5c_z.jpg
 
 CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --config_id v3 --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v3/ss_predict --shape 320 --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v3/refinedet_model-190.pth --eval_img ./samples/demo/1045023827_4ec3e8ba5c_z.jpg
@@ -284,5 +282,5 @@ CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --config_id v4 --gpu_ids 
 
 #### 2018.6.25
 
-CUDA_VISIBLE_DEVICES=6,7 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v5 --config_id v5
+CUDA_VISIBLE_DEVICES=4,5 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v5 --config_id v5
 

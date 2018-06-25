@@ -27,7 +27,7 @@ def build_mobile_net_v2(width_mult=1., data_dim=3, first_channel_num=32):
 
     # building first layer
     input_channel = int(first_channel_num * width_mult)
-    features = [conv_bn(data_dim, input_channel, stride=2)]
+    features = [conv_bn(data_dim, input_channel, stride=1)]
     # building inverted residual blocks
     for t, c, n, s in interverted_residual_setting:
         output_channel = int(c * width_mult)
@@ -87,9 +87,8 @@ class InvertedResidual(nn.Module):
 
 
 class RefineSSDMobileNet(nn.Module):
-    def __init__(self, shape, num_classes, width_mult=1., base_channel_num=128, use_refine=True):
+    def __init__(self, num_classes=81, width_mult=1., base_channel_num=128, use_refine=True):
         super(RefineSSDMobileNet, self).__init__()
-        self.shape = shape
         self.num_classes = num_classes
         self.base_channel_num = base_channel_num
         self.use_refine = use_refine
@@ -212,6 +211,7 @@ class RefineSSDMobileNet(nn.Module):
         arm_sources = []
         for k in range(len(self.base)):
             x = self.base[k](x)
+            print(x.shape)
             if k in steps:
                 arm_sources.append(x)
 
