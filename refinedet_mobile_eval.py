@@ -1,32 +1,23 @@
 # -*- coding: utf-8 -*-
 
-import sys
+import cv2
 import time
 import logging
-import cv2
 import numpy as np
-import argparse
-import pickle
 from pathlib import Path
-from collections import OrderedDict
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import torch.backends.cudnn as cudnn
-import torchvision.transforms as transforms
-import torch.nn.init as init
 from torch.autograd import Variable
-import torch.utils.data as data
 
 from src.config import config
-from src.data.data_augment import detection_collate, BaseTransform, preproc
-from src.data.coco import COCODet
+from src.data.data_augment import BaseTransform
 from src.loss import RefineMultiBoxLoss, MultiBoxLoss
 from src.detector import Detector
 from src.prior_box import PriorBox
 from src.utils.nms_wrapper import nms
-from src.utils import setup_logger, kaiming_weights_init
+from src.utils import setup_logger
 from src.utils.args import get_args
 from src.utils.timer import Timer
 
@@ -51,6 +42,7 @@ if __name__ == '__main__':
         cudnn.benchmark = True
 
     setup_logger(workspace)
+    _t = {'im_detect': Timer(), 'misc': Timer()}
 
     basic_conf = config.coco
     module_cfg = basic_conf.list[args.config_id]
@@ -72,19 +64,11 @@ if __name__ == '__main__':
         x = x.cuda()
     basic_scale = [img.shape[1], img.shape[0], img.shape[1], img.shape[0]]
 
-    _t = {'im_detect': Timer(), 'misc': Timer()}
-    # _t['im_detect'].tic()
-    forward_starts = time.time()
-    out = net(x=x, inference=True)  # forward pass
-    # detect_time = _t['im_detect'].toc()
-    detect_time = time.time() - forward_starts
+    out = net(x=x, inference=True)  # init network
 
-    forward_starts = time.time()
+    _t['im_detect'].tic()
     out = net(x=x, inference=True)  # forward pass
-    # detect_time = _t['im_detect'].toc()
-    detect_time = time.time() - forward_starts
-
-    print(detect_time)
+    detect_time = _t['im_detect'].toc()
 
     _t['misc'].tic()
     arm_loc, arm_conf, odm_loc, odm_conf = out
@@ -102,6 +86,6 @@ if __name__ == '__main__':
             img_det = cv2.rectangle(img, (left, top), (right, bottom), (255, 255, 0), 1)
             img_det = cv2.putText(img_det, '%d:%.3f'%(class_id, score), (int(left), int(top)+15), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 1)
 
-    save_path = "%s_det.png" % (Path(image_path).stem)
-    cv2.imwrite(save_path, img_det)
-    logging.info('im_detect: %s, detect_time:%.3fs nms_time:%.3fs'%(image_path, detect_time, nms_time))
+    saved_path = "%s_det.png" % (Path(image_path).stem)
+    cv2.imwrite(saved_path, img_det)
+    logging.info('im_detect: %s, detect_time:%.3fs nms_time:%.3fs\nimage saved at %s'%(image_path, detect_time, nms_time, saved_path))
