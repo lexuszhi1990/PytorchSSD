@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import os
 import time
 import logging
 import cv2
@@ -66,6 +65,7 @@ if __name__ == '__main__':
         net = torch.nn.DataParallel(net, device_ids=gpu_ids)
         net.cuda()
 
+    assert Path(image_path).exists(), "%s not exists" % image_path
     img = cv2.imread(image_path)
     x = Variable(val_trainsform(img).unsqueeze(0), volatile=True)
     if enable_cuda:
@@ -101,5 +101,7 @@ if __name__ == '__main__':
             cls_id, score, left, top, right, bottom = det
             img_det = cv2.rectangle(img, (left, top), (right, bottom), (255, 255, 0), 1)
             img_det = cv2.putText(img_det, '%d:%.3f'%(class_id, score), (int(left), int(top)+15), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 1)
-    cv2.imwrite("./test_v4.png", img_det)
+
+    save_path = "%s_det.png" % (Path(image_path).stem)
+    cv2.imwrite(save_path, img_det)
     logging.info('im_detect: %s, detect_time:%.3fs nms_time:%.3fs'%(image_path, detect_time, nms_time))
