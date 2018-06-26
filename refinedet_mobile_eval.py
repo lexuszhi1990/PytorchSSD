@@ -13,10 +13,8 @@ from torch.autograd import Variable
 
 from src.config import config
 from src.data.data_augment import BaseTransform
-from src.loss import RefineMultiBoxLoss, MultiBoxLoss
 from src.detector import Detector
 from src.prior_box import PriorBox
-from src.utils.nms_wrapper import nms
 from src.utils import setup_logger
 from src.utils.args import get_args
 from src.utils.timer import Timer
