@@ -27,7 +27,7 @@ def build_mobile_net_v2(width_mult=1., data_dim=3, first_channel_num=32):
 
     # building first layer
     input_channel = int(first_channel_num * width_mult)
-    features = [conv_bn(data_dim, input_channel, stride=1)]
+    features = [conv_bn(data_dim, input_channel, stride=2)]
     # building inverted residual blocks
     for t, c, n, s in interverted_residual_setting:
         output_channel = int(c * width_mult)
@@ -211,7 +211,7 @@ class RefineSSDMobileNet(nn.Module):
         arm_sources = []
         for k in range(len(self.base)):
             x = self.base[k](x)
-            print(x.shape)
+            # print(x.shape)
             if k in steps:
                 arm_sources.append(x)
 
@@ -231,7 +231,7 @@ class RefineSSDMobileNet(nn.Module):
         base_output, arm_sources = self.base_forward(x, [4, 7, 14])
         output = self.appended_layer(base_output)
         arm_sources.append(output)
-        # logging.info([x.shape for x in arm_sources])
+        # print([x.shape for x in arm_sources])
 
         if self.use_refine:
             for (a_s, a_l, a_c) in zip(arm_sources, self.arm_loc, self.arm_conf):
@@ -248,12 +248,12 @@ class RefineSSDMobileNet(nn.Module):
         for (a_s, t_l) in zip(arm_sources, self.trans_layers):
             trans_layer_list.append(t_l(a_s))
         trans_layer_list.reverse()
-        # logging.info([x.shape for x in trans_layer_list])
+        # print([x.shape for x in trans_layer_list])
 
         for (t_l, u_l, l_l) in zip(trans_layer_list, self.up_layers, self.latent_layrs):
             output = F.relu6(l_l(F.relu6(u_l(output) + t_l, inplace=True)), inplace=True)
             obm_sources.append(output)
-        # logging.info([x.shape for x in obm_sources])
+        # print([x.shape for x in obm_sources])
 
         obm_sources.reverse()
         for (x, op_loc, op_cls) in zip(obm_sources, self.odm_loc, self.odm_conf):

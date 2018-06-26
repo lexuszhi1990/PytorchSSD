@@ -270,6 +270,9 @@ INFO:root:[288/1350] || total_loss: 1.6948(mean_arm_loc_loss: 0.7423 mean_arm_cl
 
 CUDA_VISIBLE_DEVICES=4,5 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v3 --config_id v3
 
+config v4:
+
+```
 CUDA_VISIBLE_DEVICES=6,7 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4 --config_id v4
 
 CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --config_id v3 --gpu_ids 0 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v3/ss_predict --shape 320 --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v3/refinedet_model-190.pth --eval_img ./samples/demo/1045023827_4ec3e8ba5c_z.jpg
@@ -278,9 +281,22 @@ CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --config_id v3 --workspac
 
 CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --config_id v4 --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4/ss_predict --shape 320 --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4/refinedet_model-190.pth --eval_img ./samples/demo/1045023827_4ec3e8ba5c_z.jpg
 
-CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --config_id v4 --gpu_ids 0 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4/ss_predict --shape 320 --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4/refinedet_model-190.pth --eval_img ./samples/demo/1045023827_4ec3e8ba5c_z.jpg
+CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --config_id v4 --gpu_ids 0 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4/ss_predict --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4/refinedet_model-190.pth --eval_img ./samples/demo/1045023827_4ec3e8ba5c_z.jpg
+
+CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --config_id v4 --gpu_ids 0 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4/ss_predict --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4/Final-refineDet-199.pth --eval_img ./samples/demo/1045023827_4ec3e8ba5c_z.jpg
+```
+
 
 #### 2018.6.25
 
+config v5:
+
+```
 CUDA_VISIBLE_DEVICES=4,5 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v5 --config_id v5
 
+CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --config_id v5 --gpu_ids 0 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v5/ss_predict --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v5/refinedet_model-180.pth --eval_img ./samples/demo/1045023827_4ec3e8ba5c_z.jpg
+
+CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v5/ss_predict --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v5/refinedet_model-180.pth --eval_img ./samples/demo/1045023827_4ec3e8ba5c_z.jpg --config_id v5 --gpu_ids 0 --cuda
+
+CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v5/ss_predict --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v5/refinedet_model-180.pth --eval_img ./samples/ebike-three.jpg --config_id v5 --gpu_ids 0 --cuda
+```

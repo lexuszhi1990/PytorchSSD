@@ -284,15 +284,17 @@ config.list = {
         'max_epoch': 201,
 
         'top_k': 200,
-        'confidence_thresh': 0.01,
+        'confidence_thresh': 0.25,
+        # 'top_k': 200,
+        # 'confidence_thresh': 0.01,
         'nms_thresh': 0.45,
     },
 
     "v6" : {
-        'feature_maps': [40, 20, 10, 5],
+        'feature_maps': [[64, 36], [32, 18], [16, 9], [8, 5]],
         # 'min_dim': 320,
-        'shape': [480, 270], # [width, height]
-        'steps': [8, 16, 32, 64],
+        'shape': [512, 288], # [width, height]
+        'steps': [[8, 8], [16, 16], [32, 32], [64, 56]],
         'min_sizes': [32, 64, 128, 256],
         'max_sizes': [],
         'aspect_ratios': [[2, 3], [2, 3], [2, 3], [2, 3]],

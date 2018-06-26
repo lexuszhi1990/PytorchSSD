@@ -225,7 +225,7 @@ class RefineSSDMobileNetV1(nn.Module):
         arm_sources = []
         for k in range(len(self.base)):
             x = self.base[k](x)
-            # print(x.shape)
+            print(x.shape)
             if k in steps:
                 arm_sources.append(x)
 
@@ -246,7 +246,7 @@ class RefineSSDMobileNetV1(nn.Module):
         output = self.appended_layer[0](base_output)
         arm_sources.append(output)
         output = self.appended_layer[1](output)
-        # print([x.shape for x in arm_sources])
+        print([x.shape for x in arm_sources])
 
         if self.use_refine:
             for (a_s, a_l, a_c) in zip(arm_sources, self.arm_loc, self.arm_conf):
@@ -263,7 +263,7 @@ class RefineSSDMobileNetV1(nn.Module):
         for (a_s, t_l) in zip(arm_sources, self.trans_layers):
             trans_layer_list.append(t_l(a_s))
         trans_layer_list.reverse()
-        # print([x.shape for x in trans_layer_list])
+        print([x.shape for x in trans_layer_list])
 
         for (t_l, u_l, l_l) in zip(trans_layer_list, self.up_layers, self.latent_layrs):
             # try:
@@ -273,7 +273,7 @@ class RefineSSDMobileNetV1(nn.Module):
             #     pdb.set_trace()
             output = F.relu6(l_l(F.relu6(u_l(output) + t_l, inplace=True)), inplace=True)
             obm_sources.append(output)
-        # print([x.shape for x in obm_sources])
+        print([x.shape for x in obm_sources])
 
         obm_sources.reverse()
         for (x, op_loc, op_cls) in zip(obm_sources, self.odm_loc, self.odm_conf):

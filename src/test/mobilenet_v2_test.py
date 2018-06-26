@@ -16,7 +16,7 @@ cfg = config.list['v6']
 model = RefineSSDMobileNetV1(num_classes=81, base_channel_num=128, width_mult=1, use_refine=True)
 model.initialize_weights()
 # v2 = Variable(torch.randn(1, 3, 960, 540), requires_grad=True)
-# v2 = Variable(torch.randn(1, 3, 512, 288), requires_grad=True)
-v2 = Variable(torch.randn(1, 3, 128*4, 128*3), requires_grad=True)
+v2 = Variable(torch.randn(1, 3, 512, 288), requires_grad=True)
+# v2 = Variable(torch.randn(1, 3, 128*4, 128*3), requires_grad=True)
 y = model(v2)
 

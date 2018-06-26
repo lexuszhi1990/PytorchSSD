@@ -33,6 +33,7 @@ if __name__ == '__main__':
     ckpt_path = args.ckpt_path
     top_k = args.top_k
     nms_thresh = args.nms_thresh
+    config_id = args.config_id
     confidence_thresh = args.confidence_thresh
 
     gpu_ids = [int(i) for i in args.gpu_ids]
@@ -44,14 +45,14 @@ if __name__ == '__main__':
     setup_logger(workspace)
     _t = {'im_detect': Timer(), 'misc': Timer()}
 
+    module_cfg = config.list[config_id]
     basic_conf = config.coco
-    module_cfg = basic_conf.list[args.config_id]
     val_trainsform = BaseTransform(module_cfg['shape'], basic_conf.rgb_means, basic_conf.rgb_std, (2, 0, 1))
     priorbox = PriorBox(module_cfg)
     priors = Variable(priorbox.forward(), volatile=True)
     detector = Detector(basic_conf.num_classes, top_k=module_cfg['top_k'], conf_thresh=module_cfg['confidence_thresh'], nms_thresh=module_cfg['nms_thresh'], variance=module_cfg['variance'])
 
-    net = RefineSSDMobileNet(shape, basic_conf.num_classes, base_channel_num=module_cfg['base_channel_num'], width_mult=module_cfg['width_mult'], use_refine=module_cfg['use_refine'])
+    net = RefineSSDMobileNet(basic_conf.num_classes, base_channel_num=module_cfg['base_channel_num'], width_mult=module_cfg['width_mult'], use_refine=module_cfg['use_refine'])
     net.initialize_weights(ckpt_path)
     if enable_cuda and len(gpu_ids) > 0:
         net = torch.nn.DataParallel(net, device_ids=gpu_ids)
@@ -86,6 +87,6 @@ if __name__ == '__main__':
             img_det = cv2.rectangle(img, (left, top), (right, bottom), (255, 255, 0), 1)
             img_det = cv2.putText(img_det, '%d:%.3f'%(class_id, score), (int(left), int(top)+15), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 1)
 
-    saved_path = "%s_det.png" % (Path(image_path).stem)
+    saved_path = "%s_%s_det.png" % (Path(image_path).stem, config_id)
     cv2.imwrite(saved_path, img_det)
     logging.info('im_detect: %s, detect_time:%.3fs nms_time:%.3fs\nimage saved at %s'%(image_path, detect_time, nms_time, saved_path))
