@@ -70,12 +70,14 @@ class RefineMultiBoxLoss(nn.Module):
             gt_loc = gt_data[idx][:,:-1].data
             gt_cls = gt_data[idx][:,-1].data
             # for arm branch
-            if self.num_classes == 2 and arm_loc is None:
-                gt_cls = gt_cls > self.bg_class_id
+
             if arm_loc is None:
+                assert self.num_classes == 2, "num_classes in arm branch should be 2, not %d" % (self.num_classes)
+                gt_cls = gt_cls > self.bg_class_id
                 target_loc[idx], target_score[idx] = match(self.overlap_thresh, gt_loc, gt_cls, priors.data, self.variance)
             else:
                 target_loc[idx], target_score[idx] = refine_match(self.overlap_thresh, gt_loc, gt_cls, priors.data, arm_loc[idx].data, self.variance)
+
         if self.enable_cuda:
             target_loc = target_loc.cuda()
             target_score = target_score.cuda()

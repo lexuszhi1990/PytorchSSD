@@ -4,7 +4,7 @@ on 177 server:
 docker run --network host --ipc host -v /home/fulingzhi/workspace/PytorchSSD:/app -v /mnt/gf_mnt/datasets/cocoapi:/mnt/dataset/coco -it --rm floydhub/pytorch:0.3.0-gpu.cuda9cudnn7-py3.22-dev bash
 
 on 172 server:
-docker run --network host --ipc host -v /home/david/fashionAI/PytorchSSD:/app -v /data/david/cocoapi:/mnt/dataset/coco -v /data/david/models/pytorchSSD:/mnt/ckpt/pytorchSSD -it --rm floydhub/pytorch:0.3.0-gpu.cuda9cudnn7-py3.22-dev bash
+docker run --network host --ipc host -v /home/david/fashionAI/PytorchSSD:/app -v /data/david/cocoapi:/mnt/dataset/coco -v /data/david/open-image-v4:/mnt/dataset/open-image-v4 -v /data/david/models/pytorchSSD:/mnt/ckpt/pytorchSSD -it --rm floydhub/pytorch:0.3.0-gpu.cuda9cudnn7-py3.22-dev bash
 
 local dev:
 docker run --name py-ssd --network host --ipc host -v /Users/david/repo/detection/PytorchSSD:/app -v /Users/david/mnt/data/VOCdevkit:/mnt/dataset/voc2012 -it --rm floydhub/pytorch:0.3.1-py3.30 bash
@@ -301,4 +301,10 @@ CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --workspace /mnt/ckpt/pyt
 CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v5/ss_predict --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v5/Final-refineDet-200.pth --eval_img ./samples/ebike-three.jpg --config_id v5 --gpu_ids 0 --cuda
 
 CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --workspace ./workspace/train-v5 --ckpt_path ./ckpt/Final-refineDet-200.pth --eval_img ./samples/ebike-three.jpg --config_id v5
+```
+
+#### 2018.6.27
+
+```
+CUDA_VISIBLE_DEVICES=2,3 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v6 --config_id v6
 ```
