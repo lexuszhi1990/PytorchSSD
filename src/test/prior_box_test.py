@@ -8,3 +8,4 @@ cfg = config.list['v5']
 
 priorbox = PriorBox(cfg)
 prior_data = priorbox.forward()
+print(prior_data)
