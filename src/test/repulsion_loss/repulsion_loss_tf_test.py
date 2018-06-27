@@ -3,7 +3,7 @@ import os
 import tensorflow as tf
 import keras.backend as K
 
-from repulsion_loss import create_repulsion_loss
+from repulsion_loss_tf import create_repulsion_loss
 from utils import *
 
 os.environ['CUDA_VISIBLE_DEVICES'] = ""
@@ -24,11 +24,11 @@ def main():
     y_pred_tensor = tf.convert_to_tensor(y_pred, dtype=tf.float32)
 
     repulsion_loss = create_repulsion_loss()
-    gradients = tf.gradients(repulsion_loss(y_true_tensor, y_pred_tensor),
-                             [y_true_tensor, y_pred_tensor])
-
     print('Repulsion_loss: ', K.eval(repulsion_loss(y_true_tensor, y_pred_tensor)))
-    print('Gradients: ', list(map(K.eval, gradients)))
+    # gradients = tf.gradients(repulsion_loss(y_true_tensor, y_pred_tensor),
+    #                          [y_true_tensor, y_pred_tensor])
+
+    # print('Gradients: ', list(map(K.eval, gradients)))
 
 
 if __name__ == '__main__':

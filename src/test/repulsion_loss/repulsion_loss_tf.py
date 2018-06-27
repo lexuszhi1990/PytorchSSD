@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-
+import keras.backend as K
 
 def bbox_overlap_iou(bboxes1, bboxes2):
     x11, y11, x12, y12 = tf.split(bboxes1, 4, axis=2)
@@ -146,10 +146,14 @@ def create_repulsion_loss(alpha=0.5, betta=0.5,
 
     def _repulsion_loss(y_true, y_pred):
         y_pred = _filter_predictions(y_pred)
-        y_true, y_pred = _preprocess_inputs(y_true, y_pred)
-
-        return tf.cond(tf.logical_or(tf.equal(tf.shape(y_pred)[1], 0), tf.equal(tf.shape(y_true)[1], 0)),
+        y_true_, y_pred_ = _preprocess_inputs(y_true, y_pred)
+        # K.eval(y_pred)
+        # K.eval(y_true)
+        # K.eval(y_pred_)
+        # K.eval(y_true_)
+        _repulsion_impl(y_true_, y_pred_)
+        return tf.cond(tf.logical_or(tf.equal(tf.shape(y_pred_)[1], 0), tf.equal(tf.shape(y_true_)[1], 0)),
                        lambda: tf.Variable(0.0, dtype=tf.float32),
-                       lambda: _repulsion_impl(y_true, y_pred))
+                       lambda: _repulsion_impl(y_true_, y_pred_))
 
     return _repulsion_loss

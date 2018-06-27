@@ -1,4 +1,6 @@
 import cv2
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -38,7 +40,7 @@ def get_boxes(similarity=0.5, seed=42):
 
 
 def draw_boxes(true_boxes, predicted_boxes):
-    image = np.full((1000, 1000, 3), 0, dtype=np.int8)
+    image = np.full((1000, 1000, 3), 0, dtype=np.uint8)
 
     true_boxes_color = 0, 255, 0
     predicted_boxes_color = 255, 0, 0
@@ -57,6 +59,8 @@ def draw_boxes(true_boxes, predicted_boxes):
     for box in predicted_boxes:
         cv2.rectangle(image, (box[0], box[1]), (box[2], box[3]), predicted_boxes_color, 1)
 
-    plt.figure(figsize=(20, 20))
-    return plt.imshow(image)
+    plt.figure(figsize=(10, 10))
+    plt.imshow(image)
+    plt.savefig('asd.png')
+    # return plt.imshow(image)
 
