@@ -23,7 +23,7 @@ from src.config import config
 from src.data.data_augment import detection_collate, BaseTransform, preproc
 from src.data.coco import COCODet
 from src.data.voc import VOCDetection, AnnotationTransform
-from src.loss import RefineMultiBoxLoss, MultiBoxLoss
+from src.loss import RefineMultiBoxLoss, MultiBoxLoss, RepulsionLoss
 from src.detector import Detector
 from src.prior_box import PriorBox
 from src.utils.args import get_args
@@ -61,6 +61,7 @@ def train(workspace, train_dataset, val_dataset, val_trainsform, priors, detecto
     mean_odm_loss_c, mean_odm_loss_l, mean_arm_loss_c, mean_arm_loss_l = 0, 0, 0, 0
     arm_criterion = RefineMultiBoxLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, enable_cuda=enable_cuda)
     odm_criterion = RefineMultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.001, enable_cuda=enable_cuda)
+    arm_repulsion_criterion = RepulsionLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.001, enable_cuda=enable_cuda)
     criterion = MultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.01, enable_cuda=enable_cuda)
     logging.info('Loading datasets...')
     train_dataset_loader = data.DataLoader(train_dataset, batch_size, shuffle=True, num_workers=num_workers, collate_fn=detection_collate)
@@ -85,6 +86,8 @@ def train(workspace, train_dataset, val_dataset, val_trainsform, priors, detecto
 
             if use_refine:
                 arm_loss_l, arm_loss_c = arm_criterion((arm_loc, arm_conf), priors, targets)
+                arm_repulsion_criterion((arm_loc, arm_conf), priors, targets)
+
             odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets, (arm_loc, arm_conf))
             optimizer.zero_grad()
             if use_refine:

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import torch
 import torch.nn as nn
 import math
@@ -12,7 +14,7 @@ def point_form(boxes):
         boxes: (tensor) Converted xmin, ymin, xmax, ymax form of boxes.
     """
     return torch.cat((boxes[:, :2] - boxes[:, 2:]/2,     # xmin, ymin
-                     boxes[:, :2] + boxes[:, 2:]/2), 1)  # xmax, ymax
+                      boxes[:, :2] + boxes[:, 2:]/2), 1)  # xmax, ymax
 
 
 def IoG(box_a, box_b):
@@ -214,6 +216,51 @@ def refine_match(threshold, gt_loc, gt_cls, priors, arm_loc, variances):
     # conf : [num_priors] top class label for each prior
     return loc, conf
 
+def rep_match(threshold, gt_loc, gt_cls, priors, variances):
+    """Match each prior box with the ground truth box of the highest jaccard
+    overlap, encode the bounding boxes, then return the matched indices
+    corresponding to both confidence and location preds.
+    Args:
+        threshold: (float) The overlap threshold used when mathing boxes.
+        gt_loc: (tensor) Ground truth boxes, Shape: [num_obj, num_priors].
+        priors: (tensor) Prior boxes from priorbox layers, Shape: [n_priors,4].
+        variances: (tensor) Variances corresponding to each prior coord,
+            Shape: [num_priors, 4].
+        gt_cls: (tensor) All the class gt_cls for the image, Shape: [num_obj].
+        loc_t: (tensor) Tensor to be filled w/ endcoded location targets.
+        conf_t: (tensor) Tensor to be filled w/ matched indices for conf preds.
+        idx: (int) current batch index
+    Return:
+        The matched indices corresponding to 1)location and 2)confidence preds.
+    """
+    # jaccard index
+    overlaps = jaccard(
+        gt_loc,
+        point_form(priors)
+    )
+    # (Bipartite Matching)
+    best_prior_overlap, best_prior_idx = overlaps.max(1, keepdim=True)
+    # [1,num_priors] best ground truth for each prior
+    # best_truth_overlap 每个anchor与gt最大的overlap
+    best_truth_overlap, best_truth_idx = overlaps.max(0, keepdim=True)
+    best_truth_idx.squeeze_(0)
+    best_truth_overlap.squeeze_(0)
+    best_prior_idx.squeeze_(1)
+    best_prior_overlap.squeeze_(1)
+
+    best_truth_overlap.index_fill_(0, best_prior_idx, 2)  # ensure best prior
+    # TODO refactor: index best_prior_idx with long tensor
+    # ensure every gt matches with its prior of max overlap
+    for j in range(best_prior_idx.size(0)):
+        best_truth_idx[best_prior_idx[j]] = j
+
+    matches = gt_loc[best_truth_idx]          # Shape: [num_priors,4]
+    conf = gt_cls[best_truth_idx]             # Shape: [num_priors]
+    conf[best_truth_overlap < threshold] = 0  # label as background
+    loc = encode(matches, priors, variances)
+
+    return loc, conf
+
 
 def encode(matched, priors, variances):
     """Encode the variances from the priorbox layers into the ground truth boxes
@@ -379,7 +426,7 @@ def pytorch_nms(boxes, scores, overlap=0.5, top_k=200):
         h = torch.clamp(h, min=0.0)
         inter = w*h
         # IoU = i / (area(a) + area(b) - i)
-        rem_areas = torch.index_select(area, 0, idx)  # load remaining areas)
+        rem_areas = torch.index_select(area, 0, idx) # load remaining areas
         union = (rem_areas - inter) + area[i]
         IoU = inter/union  # store result in iou
         # keep only elements with an IoU <= overlap

@@ -59,8 +59,6 @@ class RefineMultiBoxLoss(nn.Module):
         pred_loc, pred_score = pred_data
         arm_loc, arm_conf = arm_data
         num = pred_loc.size(0)
-        pred_loc.size(1)
-        priors[:pred_loc.size(1), :]
         num_priors = (priors.size(0))
 
         # match priors (default boxes) and ground truth boxes
@@ -70,7 +68,6 @@ class RefineMultiBoxLoss(nn.Module):
             gt_loc = gt_data[idx][:,:-1].data
             gt_cls = gt_data[idx][:,-1].data
             # for arm branch
-
             if arm_loc is None:
                 assert self.num_classes == 2, "num_classes in arm branch should be 2, not %d" % (self.num_classes)
                 gt_cls = gt_cls > self.bg_class_id
@@ -83,7 +80,7 @@ class RefineMultiBoxLoss(nn.Module):
             target_score = target_score.cuda()
         # wrap gt_data
         target_loc = Variable(target_loc, requires_grad=False)
-        target_score = Variable(target_score,requires_grad=False)
+        target_score = Variable(target_score, requires_grad=False)
 
         pos = target_score > 0
         if arm_conf is not None and self.filter_arm_object:

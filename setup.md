@@ -308,3 +308,10 @@ CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --workspace ./workspace/t
 ```
 CUDA_VISIBLE_DEVICES=2,3 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v6 --config_id v6
 ```
+
+#### 2018.6.28
+
+```
+CUDA_VISIBLE_DEVICES=2,3 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v-r --config_id v-r
+CUDA_VISIBLE_DEVICES=2,3 python refinedet_mobile_train.py --dataset COCO --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v-r --config_id v-r
+```
