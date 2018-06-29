@@ -8,6 +8,7 @@ Updated by: Ellis Brown, Max deGroot
 
 import json
 import pickle
+import logging
 
 import cv2
 import numpy as np
@@ -62,13 +63,13 @@ class COCODet(data.Dataset):
         self.ids = [self.image_path_from_index(index) for index in self.image_indexes]
 
         if image_set.find('test') != -1:
-            print('test set will not load annotations!')
+            logging.info('test set will not load annotations!')
         else:
             self.annotations = self._load_coco_annotations()
 
         if not self.cache_path.exists():
             self.cache_path.mkdir()
-            print('create cache path %s ' % self.cache_path)
+            logging.info('create cache path %s ' % self.cache_path)
 
     def image_path_from_index(self, index):
         """
@@ -85,14 +86,14 @@ class COCODet(data.Dataset):
         if cache_file.exists():
             with cache_file.open('rb') as fid:
                 roidb = pickle.load(fid)
-            print('{} gt roidb loaded from {}'.format(self.image_set, cache_file))
+            logging.info('{} gt roidb loaded from {}'.format(self.image_set, cache_file))
             return roidb
 
         gt_roidb = [self._annotation_from_index(index)
                     for index in self.image_indexes]
         with open(cache_file, 'wb') as fid:
             pickle.dump(gt_roidb, fid, pickle.HIGHEST_PROTOCOL)
-        print('wrote gt roidb to {}'.format(cache_file))
+        logging.info('wrote gt roidb to {}'.format(cache_file))
 
         return gt_roidb
 
@@ -149,7 +150,7 @@ class COCODet(data.Dataset):
             img, target = self.preproc(img, target)
 
             # target = self.target_transform(target, width, height)
-        # print(target.shape)
+        # logging.info(target.shape)
 
         return img, target
 
@@ -203,18 +204,18 @@ class COCODet(data.Dataset):
         precision = \
             coco_eval.eval['precision'][ind_lo:(ind_hi + 1), :, :, 0, 2]
         ap_default = np.mean(precision[precision > -1])
-        print('~~~~ Mean and per-category AP @ IoU=[{:.2f},{:.2f}] '
+        logging.info('~~~~ Mean and per-category AP @ IoU=[{:.2f},{:.2f}] '
               '~~~~'.format(IoU_lo_thresh, IoU_hi_thresh))
-        print('{:.1f}'.format(100 * ap_default))
+        logging.info('{:.1f}'.format(100 * ap_default))
         for cls_ind, cls in enumerate(self._classes):
             if cls == '__background__':
                 continue
             # minus 1 because of __background__
             precision = coco_eval.eval['precision'][ind_lo:(ind_hi + 1), :, cls_ind - 1, 0, 2]
             ap = np.mean(precision[precision > -1])
-            print('{:.1f}'.format(100 * ap))
+            logging.info('{:.1f}'.format(100 * ap))
 
-        print('~~~~ Summary metrics ~~~~')
+        logging.info('~~~~ Summary metrics ~~~~')
         coco_eval.summarize()
 
     def _do_detection_eval(self, res_file, output_dir):
@@ -228,7 +229,7 @@ class COCODet(data.Dataset):
         eval_file = Path(output_dir, 'detection_results.pkl')
         with eval_file.open('wb') as fid:
             pickle.dump(coco_eval, fid, pickle.HIGHEST_PROTOCOL)
-        print('Wrote COCO eval results to: {}'.format(eval_file))
+        logging.info('Wrote COCO eval results to: {}'.format(eval_file))
 
     def _coco_results_one_category(self, boxes, cat_id):
         results = []
@@ -257,18 +258,18 @@ class COCODet(data.Dataset):
         for cls_ind, cls in enumerate(self._classes):
             if cls == '__background__':
                 continue
-            print('Collecting {} results ({:d}/{:d})'.format(cls, cls_ind, self.num_classes))
+            logging.info('Collecting {} results ({:d}/{:d})'.format(cls, cls_ind, self.num_classes))
             coco_cat_id = self._class_to_coco_cat_id[cls]
             results.extend(self._coco_results_one_category(all_boxes[cls_ind], coco_cat_id))
             '''
             if cls_ind ==30:
                 res_f = res_file+ '_1.json'
-                print('Writing results json to {}'.format(res_f))
+                logging.info('Writing results json to {}'.format(res_f))
                 with open(res_f, 'w') as fid:
                     json.dump(results, fid)
                 results = []
             '''
-        print('Writing results json to {}'.format(res_file))
+        logging.info('Writing results json to {}'.format(res_file))
         with open(res_file, 'w') as fid:
             json.dump(results, fid)
 
