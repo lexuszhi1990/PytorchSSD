@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
     for class_id in range(1, basic_conf.num_classes):
         cls_outut = output_np[class_id]
-        dets = cls_outut[cls_outut[:, 1] > 0.25]
+        dets = cls_outut[cls_outut[:, 1] > 0.45]
         dets[:, 2:6] = np.floor(dets[:, 2:6] * basic_scale)
         for det in dets:
             cls_id, score, left, top, right, bottom = det

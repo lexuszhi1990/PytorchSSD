@@ -79,7 +79,7 @@ config.voc.dimension_512 = {
 ####################################################
 
 config.coco.root_path = '/mnt/dataset/coco'
-if False:
+if True:
     config.coco.train_sets = 'train2017'
     config.coco.val_sets = 'val2017'
     config.coco.num_classes = 81
