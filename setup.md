@@ -313,7 +313,6 @@ CUDA_VISIBLE_DEVICES=2,3 python refinedet_mobile_train.py --dataset COCO --gpu_i
 
 ```
 CUDA_VISIBLE_DEVICES=2,3 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v-r --config_id v-r
-CUDA_VISIBLE_DEVICES=2,3 python refinedet_mobile_train.py --dataset COCO --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v-r --config_id v-r
 ```
 
 #### 2018.6.29
@@ -322,7 +321,11 @@ CUDA_VISIBLE_DEVICES=2,3 python refinedet_mobile_train.py --dataset COCO --works
 CUDA_VISIBLE_DEVICES=2 python refinedet_mobile_eval.py --workspace ./workspace/train-v6 --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v6/refinedet_model-190.pth --eval_img ./samples/ebike-three.jpg --config_id v6
 ```
 
+```
+CUDA_VISIBLE_DEVICES=1 python refinedet_mobile_val.py --dataset COCO --gpu_ids 0 --cuda --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v6/refinedet_model-190.pth  --config_id v6
+```
 
-```
-CUDA_VISIBLE_DEVICES=1 python refinedet_mobile_val.py --dataset COCO --gpu_ids 2 --cuda --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v6/refinedet_model-190.pth  --config_id v6
-```
+#### 2018.7.3
+
+
+CUDA_VISIBLE_DEVICES=1 python train.py --dataset COCO --gpu_ids 0 --cuda --workspace /mnt/ckpt/pytorchSSD/RefineDet_Renset/v1 --config_id r1

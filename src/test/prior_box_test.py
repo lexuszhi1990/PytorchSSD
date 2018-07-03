@@ -4,7 +4,7 @@ sys.path.append('.')
 from src.prior_box import PriorBox
 from src.config import config
 
-cfg = config.list['v5']
+cfg = config.list['r1']
 
 priorbox = PriorBox(cfg)
 prior_data = priorbox.forward()

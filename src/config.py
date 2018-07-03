@@ -320,6 +320,43 @@ config.list = {
         'nms_thresh': 0.45,
     },
 
+    # resnet config
+    "r1" : {
+
+        'train_sets' : 'person_train2017',
+        'val_sets' : 'person_val2017',
+        'num_classes' : 2,
+
+        'feature_maps': [40, 20],
+        'min_dim': 320,
+        'steps': [8, 16],
+        'min_sizes': [64, 256],
+        'max_sizes': [],
+        'aspect_ratios': [[3], [3]],
+        # 'aspect_ratios': [[2], [2], [2], [2]],
+        # 'aspect_ratios': [[2, 3], [2], [2], [2]],
+        'variance': [0.1, 0.2],
+        'clip': True,
+
+        'width_mult': 1.,
+        'base_channel_num': 256,
+        'use_refine': True,
+        'batch_size': 16,
+        'num_workers': 8,
+        'shape': 320,
+        'base_lr': 4e-2,
+        'momentum': 0.9,
+        'weight_decay': 5e-4,
+        'gamma': 0.1,
+        'max_epoch': 201,
+
+        'top_k': 100,
+        'confidence_thresh': 0.15,
+        # 'top_k': 200,
+        # 'confidence_thresh': 0.01,
+        'nms_thresh': 0.45,
+    },
+
     "v-test" : {
         'feature_maps': [[64, 36], [32, 18], [16, 9], [8, 5]],
         # 'min_dim': 320,
@@ -346,6 +383,8 @@ config.list = {
         'confidence_thresh': 0.01,
         'nms_thresh': 0.45,
     },
+
+
     "v-r" : {
         'feature_maps': [40, 20, 10, 5],
         'min_dim': 320,

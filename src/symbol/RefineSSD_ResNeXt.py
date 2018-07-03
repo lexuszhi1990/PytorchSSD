@@ -196,7 +196,7 @@ class RefineSSDSEResNeXt(nn.Module):
             self.load_state_dict(new_state_dict)
             logging.info("load weights from %s" % ckpt_path)
         else:
-            self.initialize_base_weights()
+            self.feature_net.apply(kaiming_weights_init)
             self.appended_layer.apply(kaiming_weights_init)
             self.trans_layers.apply(kaiming_weights_init)
             self.up_layers.apply(kaiming_weights_init)

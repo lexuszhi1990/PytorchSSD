@@ -224,7 +224,7 @@ class RefineSSD(nn.Module):
             print('Sorry only .pth and .pkl files supported.')
 
 
-def build_net(size=320, num_classes=21, use_refine=False):
+def RefineSSDVGG(size=320, num_classes=21, use_refine=False):
     if size != 320:
         print("Error: Sorry only SSD300 and SSD512 is supported currently!")
         return
