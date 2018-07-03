@@ -328,4 +328,18 @@ CUDA_VISIBLE_DEVICES=1 python refinedet_mobile_val.py --dataset COCO --gpu_ids 0
 #### 2018.7.3
 
 
+test on previous models:
+
+```
+CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --workspace ./workspace/train-v3 --ckpt_path ./ckpt/train-v3-Final-refineDet-199.pth --eval_img ./samples/ebike-three.jpg --config_id v3
+
+CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --workspace ./workspace/train-v4 --ckpt_path ./ckpt/train-v4-Final-refineDet-199.pth --eval_img ./samples/ebike-three.jpg --config_id v4
+
+CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --workspace ./workspace/train-v5 --ckpt_path ./ckpt/train-v5-Final-refineDet-200.pth --eval_img ./samples/ebike-three.jpg --config_id v5
+
+CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --workspace ./workspace/train-v6 --ckpt_path ckpt/train-v6-refinedet_model-190.pth --eval_img ./samples/ebike-three.jpg --config_id v6
+```
+
+
+
 CUDA_VISIBLE_DEVICES=1 python train.py --dataset COCO --gpu_ids 0 --cuda --workspace /mnt/ckpt/pytorchSSD/RefineDet_Renset/v1 --config_id r1
