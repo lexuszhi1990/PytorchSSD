@@ -1,20 +1,37 @@
-269.4394  286.3957  356.1208  163.1103, 0.8396
-269.4604  126.4046  356.1156  163.0739, 0.5177
-268.9220   46.2351  355.8490  163.0686, 0.6905
-269.5518  142.3746  356.1980  163.0585, 0.2645
-269.5271  158.3781  356.1315  163.0390, 0.5886
-269.4869  190.3975  356.2182  163.0330, 0.7892
-269.5131  254.4095  356.1404  163.0201, 0.6397
-269.5223  110.4204  356.0371  163.0166, 0.3891
-269.4920  270.4172  356.1421  163.0154, 0.4650
-269.5264  302.4241  356.2176  163.0137, 0.8603
-269.6095   94.3858  356.0316  163.0012, 0.1889
-292.4205  315.5175  324.2798  162.9957, 0.0000
-269.5077  222.3948  356.2064  162.9926, 0.0615
-269.5875   78.4029  356.1089  162.9917, 0.0647
-269.5486  206.3959  356.1957  162.9769, 0.8602
-269.5515  174.4094  356.1617  162.9728, 0.7391
-269.4823  238.3987  356.1536  162.9715, 0.8620
-160.5301  321.7844  183.0552  162.9414, 0.3398
-152.6132  321.8762  175.1173  162.8697, 0.8618
-32.0364  330.9955   54.7215  162.8625, 0.1393
+# -*- coding: utf-8 -*-
+
+import numpy as np
+
+def nms_scratch(dets, scores, threshold):
+    '''
+        dets: Nx4. [xmin, ymin, xmax, ymax]
+        scores: Nx1
+        threshold: scalar, [0, 1]
+    '''
+
+    x1 = dets[:, 0]
+    y1 = dets[:, 1]
+    x2 = dets[:, 2]
+    y2 = dets[:, 3]
+
+    bbox_areas = (x2 - x1 + 1) * (y2 - y1 + 1)
+    scores_index = scores.argsort()[::-1]
+
+    keep = []
+    while scores_index.size > 0:
+        i = 0
+        keep.append(i)
+        xx1 = np.maximum(dets[i, 0], dets[scores_index[1:], 0])
+        yy1 = np.maximum(dets[i, 1], dets[scores_index[1:], 1])
+        xx2 = np.minimum(dets[i, 2], dets[scores_index[1:], 2])
+        yy2 = np.minimum(dets[i, 3], dets[scores_index[1:], 3])
+
+        weight = np.maximum(0.0, xx2 - xx1 + 1)
+        height = np.maximum(0.0, yy1 - yy1 + 1)
+
+        inter_section = weight * height
+        iou = inter_section / (bbox_areas[i] + inter_section[scores_index[i:]] - inter_section)
+
+        indx = np.where(iou < threshold)[0]
+        scores_index = scores_index[inds + 1]
+
