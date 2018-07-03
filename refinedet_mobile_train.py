@@ -32,7 +32,7 @@ from src.utils.timer import Timer
 
 from src.utils.nms_wrapper import nms
 
-from src.symbol.RefineSSD_vgg import build_net
+from src.symbol.RefineSSD_vgg import RefineSSDVGG
 from src.symbol.RefineSSD_mobilenet_v2 import RefineSSDMobileNet
 from refinedet_mobile_val import val
 

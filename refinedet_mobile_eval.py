@@ -19,7 +19,7 @@ from src.utils import setup_logger
 from src.utils.args import get_args
 from src.utils.timer import Timer
 
-from src.symbol.RefineSSD_vgg import build_net
+from src.symbol.RefineSSD_vgg import RefineSSDVGG
 from src.symbol.RefineSSD_mobilenet_v2 import RefineSSDMobileNet
 
 if __name__ == '__main__':
