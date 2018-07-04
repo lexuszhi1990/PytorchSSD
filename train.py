@@ -31,27 +31,21 @@ from src.symbol.RefineSSD_mobilenet_v2 import RefineSSDMobileNet
 from src.symbol.RefineSSD_ResNeXt import RefineSSDSEResNeXt
 from refinedet_mobile_val import val
 
-def train(workspace, train_dataset, val_dataset, val_trainsform, priors, detector, base_channel_num, width_mult, use_refine,batch_size, num_workers, shape, base_lr, momentum, weight_decay, gamma, max_epoch=200, resume=False, resume_epoch=0, save_frequency=10, enable_cuda=False, gpu_ids=[], enable_visdom=False, prefix='refinedet_model'):
+def train(workspace, num_classes, train_dataset, val_dataset, val_trainsform, priors, detector, base_channel_num, width_mult, use_refine,batch_size, num_workers, shape, base_lr, momentum, weight_decay, gamma, max_epoch=200, resume=False, resume_epoch=0, save_frequency=10, enable_cuda=False, gpu_ids=[], enable_visdom=False, prefix='refinedet_model'):
 
     if enable_visdom:
         viz = visdom.Visdom()
 
     workspace_path = Path(workspace)
-    if not workspace_path.exists():
-        workspace_path.mkdir(parents=True)
-    val_results_path = workspace_path.joinpath('ss_predict')
+    val_results_path = workspace_path.joinpath('validation')
     if not val_results_path.exists():
         val_results_path.mkdir(parents=True)
-    log_file_path = workspace_path.joinpath("train-%s" % (shape))
-    setup_logger(log_file_path.as_posix())
 
     # net = RefineSSDMobileNet(num_classes, base_channel_num=base_channel_num, width_mult=width_mult, use_refine=use_refine)
-
     net = RefineSSDSEResNeXt(num_classes=num_classes, base_channel_num=base_channel_num, use_refine=use_refine)
 
     net.initialize_weights()
     logging.info(net)
-
     if enable_cuda and len(gpu_ids) > 0:
         net = torch.nn.DataParallel(net, device_ids=gpu_ids)
 
@@ -82,7 +76,6 @@ def train(workspace, train_dataset, val_dataset, val_trainsform, priors, detecto
 
             if use_refine:
                 arm_loss_l, arm_loss_c = arm_criterion((arm_loc, arm_conf), priors, targets)
-                arm_repulsion_criterion((arm_loc, arm_conf), priors, targets)
 
             odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets, (arm_loc, arm_conf))
             optimizer.zero_grad()
@@ -97,7 +90,6 @@ def train(workspace, train_dataset, val_dataset, val_trainsform, priors, detecto
                 mean_arm_loss_l += arm_loss_l.data[0]
             mean_odm_loss_l += odm_loss_l.data[0]
             mean_odm_loss_c += odm_loss_c.data[0]
-
             if iteration % save_frequency == 0:
                 logging.info("[%d/%d] || total_loss: %.4f(mean_arm_loc_loss: %.4f mean_arm_cls_loss: %.4f mean_obm_loc_loss: %.4f mean_obm_cls_loss: %.4f) || Batch time: %.4f sec. || LR: %.6f" % (epoch, iteration, loss, mean_arm_loss_l/save_frequency, mean_arm_loss_c/save_frequency, mean_odm_loss_l/save_frequency, mean_odm_loss_c/save_frequency, timer.average_time, optimizer.param_groups[0]['lr']))
                 timer.clear()
@@ -124,6 +116,8 @@ if __name__ == '__main__':
     # import pdb
     # pdb.set_trace()
 
+
+
     args = get_args()
     workspace = args.workspace
     batch_size = args.batch_size
@@ -140,25 +134,31 @@ if __name__ == '__main__':
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
         cudnn.benchmark = True
 
+    workspace_path = Path(workspace)
+    if not workspace_path.exists():
+        workspace_path.mkdir(parents=True)
+    log_file_path = Path(workspace).joinpath("train-%s" % (dataset))
+    setup_logger(log_file_path.as_posix())
+
     if dataset == "COCO":
         basic_conf = config.coco
     elif dataset == "VOC":
         basic_conf = config.voc
     else:
         raise RuntimeError("not support dataset %s" % (dataset))
-    root_path, train_sets, val_sets, num_classes, img_dim, rgb_means, rgb_std, augment_ratio = basic_conf.root_path, basic_conf.train_sets, basic_conf.val_sets, basic_conf.num_classes, basic_conf.img_dim, basic_conf.rgb_means, basic_conf.rgb_std, basic_conf.augment_ratio
+    root_path, img_dim, rgb_means, rgb_std, augment_ratio = basic_conf.root_path, basic_conf.img_dim, basic_conf.rgb_means, basic_conf.rgb_std, basic_conf.augment_ratio
 
     module_cfg = config.list[args.config_id]
     val_trainsform = BaseTransform(module_cfg['shape'], rgb_means, rgb_std, (2, 0, 1))
     priorbox = PriorBox(module_cfg)
     priors = Variable(priorbox.forward(), volatile=True)
-    detector = Detector(num_classes, top_k=module_cfg['top_k'], conf_thresh=module_cfg['confidence_thresh'], nms_thresh=module_cfg['nms_thresh'], variance=module_cfg['variance'])
+    detector = Detector(module_cfg['num_classes'], top_k=module_cfg['top_k'], conf_thresh=module_cfg['confidence_thresh'], nms_thresh=module_cfg['nms_thresh'], variance=module_cfg['variance'])
 
     if dataset == "VOC":
-        train_dataset = VOCDetection(root_path, train_sets, preproc(img_dim, rgb_means, rgb_std, augment_ratio), AnnotationTransform())
-        val_dataset = VOCDetection(root_path, val_sets, None, AnnotationTransform())
+        train_dataset = VOCDetection(root_path, module_cfg['train_sets'], preproc(img_dim, rgb_means, rgb_std, augment_ratio), AnnotationTransform())
+        val_dataset = VOCDetection(root_path, module_cfg['val_sets'], None, AnnotationTransform())
     elif dataset == "COCO":
-        train_dataset = COCODet(root_path, train_sets, preproc(img_dim, rgb_means, rgb_std, augment_ratio))
-        val_dataset = COCODet(root_path, val_sets, None)
+        train_dataset = COCODet(root_path, module_cfg['train_sets'], preproc(img_dim, rgb_means, rgb_std, augment_ratio))
+        val_dataset = COCODet(root_path, module_cfg['val_sets'], None)
 
-    train(workspace, train_dataset, val_dataset, val_trainsform, priors, detector, module_cfg['base_channel_num'], module_cfg['width_mult'], module_cfg['use_refine'], module_cfg['batch_size'], module_cfg['num_workers'], module_cfg['shape'], module_cfg['base_lr'], module_cfg['momentum'], module_cfg['weight_decay'], module_cfg['gamma'], module_cfg['max_epoch'], resume, resume_epoch, save_frequency, enable_cuda, gpu_ids, enable_visdom, prefix)
+    train(workspace, module_cfg['num_classes'], train_dataset, val_dataset, val_trainsform, priors, detector, module_cfg['base_channel_num'], module_cfg['width_mult'], module_cfg['use_refine'], module_cfg['batch_size'], module_cfg['num_workers'], module_cfg['shape'], module_cfg['base_lr'], module_cfg['momentum'], module_cfg['weight_decay'], module_cfg['gamma'], module_cfg['max_epoch'], resume, resume_epoch, save_frequency, enable_cuda, gpu_ids, enable_visdom, prefix)

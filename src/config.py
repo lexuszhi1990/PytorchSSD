@@ -78,7 +78,6 @@ config.voc.dimension_512 = {
 #           coco config
 ####################################################
 
-config.coco.root_path = '/mnt/dataset/coco'
 if True:
     config.coco.train_sets = 'train2017'
     config.coco.val_sets = 'val2017'
@@ -87,6 +86,8 @@ else:
     config.coco.train_sets = 'person_train2017'
     config.coco.val_sets = 'person_val2017'
     config.coco.num_classes = 2
+
+config.coco.root_path = '/mnt/dataset/coco'
 config.coco.img_dim = 320
 config.coco.rgb_std = (1,1,1)
 config.coco.rgb_means = (104,117,123)
@@ -341,8 +342,8 @@ config.list = {
         'width_mult': 1.,
         'base_channel_num': 256,
         'use_refine': True,
-        'batch_size': 16,
-        'num_workers': 8,
+        'batch_size': 4,
+        'num_workers': 2,
         'shape': 320,
         'base_lr': 4e-2,
         'momentum': 0.9,

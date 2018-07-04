@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import math
 from collections import OrderedDict
 from pathlib import Path
 
@@ -8,6 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from src.utils import kaiming_weights_init, xavier, load_weights
+import logging
 
 class SEScale(nn.Module):
     def __init__(self, channel, reduction=16):
@@ -128,6 +130,21 @@ class SEResNeXtFPN(nn.Module):
             layers.append(Bottleneck(o_ch, o_ch))
         return nn.Sequential(*layers)
 
+    def initialize_base_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+            elif isinstance(m, nn.Linear):
+                n = m.weight.size(1)
+                m.weight.data.normal_(0, 0.01)
+                m.bias.data.zero_()
+
     def forward(self, x):
         c1 = self.conv1(x)
         c2 = self.conv2_x(c1)
@@ -194,18 +211,15 @@ class RefineSSDSEResNeXt(nn.Module):
                     name = k
                 new_state_dict[name] = v
             self.load_state_dict(new_state_dict)
-            logging.info("load weights from %s" % ckpt_path)
         else:
-            self.feature_net.apply(kaiming_weights_init)
-            self.appended_layer.apply(kaiming_weights_init)
-            self.trans_layers.apply(kaiming_weights_init)
-            self.up_layers.apply(kaiming_weights_init)
-            self.latent_layrs.apply(kaiming_weights_init)
+            self.feature_net.initialize_base_weights()
+            logging.info("load weights from %s" % ckpt_path)
             self.odm_loc.apply(kaiming_weights_init)
             self.odm_conf.apply(kaiming_weights_init)
             if self.use_refine:
                 self.arm_loc.apply(kaiming_weights_init)
                 self.arm_conf.apply(kaiming_weights_init)
+            logging.info("init weights from scratch")
 
     def forward(self, x, inference=False):
         latent_feat, final_feat = self.feature_net(x)
