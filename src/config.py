@@ -359,15 +359,21 @@ config.list = {
     },
 
     "v-test" : {
+        # 'shape': [320, 320], # [width, height]
+        # 'feature_maps': [[40, 40], [20, 20], [10, 10], [5, 5]],
+        # 'steps': [[8, 8], [16, 16], [32, 32], [64, 64]],
+        # 'aspect_ratios': [[2], [2], [2], [2]],
+        # 'min_sizes': [[32, 32], [64, 64], [128, 128], [256, 256]],
+
         'feature_maps': [[64, 36], [32, 18], [16, 9], [8, 5]],
-        # 'min_dim': 320,
         'shape': [512, 288], # [width, height]
         'steps': [[8, 8], [16, 16], [32, 32], [64, 56]],
-        'min_sizes': [32, 64, 128, 256],
-        'max_sizes': [],
         'aspect_ratios': [[2, 3], [2, 3], [2, 3], [2, 3]],
+        'min_sizes': [[32, 24], [64, 48], [128, 96], [256, 196]],
+        'max_sizes': [],
         'variance': [0.1, 0.2],
         'clip': True,
+        # 'min_dim': 320,
 
         'width_mult': 0.75,
         'base_channel_num': 128,
