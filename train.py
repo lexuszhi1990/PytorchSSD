@@ -21,8 +21,8 @@ from src.data.voc import VOCDetection, AnnotationTransform
 from src.loss import RefineMultiBoxLoss, MultiBoxLoss, RepulsionLoss
 from src.detector import Detector
 from src.prior_box import PriorBox
-from src.utils.args import get_args
 from src.utils import setup_logger, kaiming_weights_init
+from src.utils.args import get_args
 from src.utils.timer import Timer
 from src.utils.nms_wrapper import nms
 
@@ -118,8 +118,6 @@ if __name__ == '__main__':
     # import pdb
     # pdb.set_trace()
 
-
-
     args = get_args()
     workspace = args.workspace
     batch_size = args.batch_size
@@ -129,7 +127,6 @@ if __name__ == '__main__':
     resume_epoch = args.resume_epoch
     save_frequency = args.save_frequency
     enable_visdom = args.visdom
-
     gpu_ids = [int(i) for i in args.gpu_ids]
     enable_cuda = args.cuda and torch.cuda.is_available() and len(gpu_ids) > 0
     if enable_cuda:

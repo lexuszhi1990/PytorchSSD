@@ -340,6 +340,73 @@ CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --workspace ./workspace/t
 CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --workspace ./workspace/train-v6 --ckpt_path ckpt/train-v6-refinedet_model-190.pth --eval_img ./samples/ebike-three.jpg --config_id v6
 ```
 
-
-
 CUDA_VISIBLE_DEVICES=4,5 python train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/RefineDet_Renset/v1 --config_id r1
+
+
+### 2018.7.5
+
+config v3:
+```
+CUDA_VISIBLE_DEVICES=0 python val.py --dataset COCO --gpu_ids 0 --cuda --workspace ./workspace/train-v3 --config_id v3 --ckpt_path ckpt/train-v3-Final-refineDet-199.pth
+
+Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.163
+Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.357
+Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.128
+Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.040
+Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.192
+Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.337
+Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.102
+Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.230
+Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.275
+Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.092
+Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.335
+Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.483
+rote COCO eval results to: workspace/train-v3/detection_results.pkl
+```
+
+config v4:
+
+```
+CUDA_VISIBLE_DEVICES=0 python val.py --dataset COCO --gpu_ids 0 --cuda --workspace ./workspace/train-v4 --config_id v4 --ckpt_path ckpt/train-v4-Final-refineDet-199.pth
+
+Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.140
+Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.316
+Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.107
+Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.020
+Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.158
+Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.323
+Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.094
+Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.203
+Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.226
+Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.053
+Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.258
+Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.457
+```
+
+config v5:
+
+```
+CUDA_VISIBLE_DEVICES=0 python val.py --dataset COCO --gpu_ids 0 --cuda --workspace ./workspace/train-v5 --config_id v5 --ckpt_path ckpt/train-v5-Final-refineDet-200.pth
+
+Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.133
+Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.264
+Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.121
+Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.006
+Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.137
+Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.354
+Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.099
+Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.170
+Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.170
+Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.000
+Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.160
+Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.451
+```
+
+config v6:
+
+```
+CUDA_VISIBLE_DEVICES=0 python val.py --dataset COCO --gpu_ids 0 --cuda --workspace ./workspace/train-v6 --config_id v6 --ckpt_path ./ckpt/train-v6-refinedet_model-190.pth
+
+CUDA_VISIBLE_DEVICES=1 python refinedet_mobile_val.py --dataset COCO --gpu_ids 0 --cuda --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v6/refinedet_model-190.pth  --config_id v6
+
+```

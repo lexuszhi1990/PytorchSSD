@@ -185,6 +185,11 @@ config.list = {
         'use_refine': True,
     },
     "v2" : {
+
+        'train_sets' : 'person_train2017',
+        'val_sets' : 'person_val2017',
+        'num_classes' : 2,
+
         'feature_maps': [40, 20, 10, 5],
         'min_dim': 320,
         'steps': [8, 16, 32, 64],
@@ -211,6 +216,11 @@ config.list = {
         'nms_thresh': 0.45,
     },
     "v3" : {
+
+        'train_sets' : 'person_train2017',
+        'val_sets' : 'person_val2017',
+        'num_classes' : 2,
+
         'feature_maps': [40, 20, 10, 5],
         'min_dim': 320,
         'steps': [8, 16, 32, 64],
@@ -237,6 +247,11 @@ config.list = {
         'nms_thresh': 0.45,
     },
     "v4" : {
+
+        'train_sets' : 'person_train2017',
+        'val_sets' : 'person_val2017',
+        'num_classes' : 2,
+
         'feature_maps': [40, 20, 10, 5],
         'min_dim': 320,
         'steps': [8, 16, 32, 64],
@@ -263,6 +278,11 @@ config.list = {
         'nms_thresh': 0.45,
     },
     "v5" : {
+
+        'train_sets' : 'person_train2017',
+        'val_sets' : 'person_val2017',
+        'num_classes' : 2,
+
         'feature_maps': [40, 20, 10, 5],
         'min_dim': 320,
         'steps': [8, 16, 32, 64],
@@ -292,6 +312,11 @@ config.list = {
         'nms_thresh': 0.45,
     },
     "v6" : {
+
+        'train_sets' : 'train2017',
+        'val_sets' : 'val2017',
+        'num_classes' : 81,
+
         'feature_maps': [40, 20, 10, 5],
         'min_dim': 320,
         'steps': [8, 16, 32, 64],
@@ -314,10 +339,10 @@ config.list = {
         'gamma': 0.1,
         'max_epoch': 201,
 
-        'top_k': 100,
-        'confidence_thresh': 0.15,
-        # 'top_k': 200,
-        # 'confidence_thresh': 0.01,
+        # 'top_k': 100,
+        # 'confidence_thresh': 0.15,
+        'top_k': 200,
+        'confidence_thresh': 0.01,
         'nms_thresh': 0.45,
     },
 
