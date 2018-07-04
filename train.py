@@ -76,13 +76,15 @@ def train(workspace, num_classes, train_dataset, val_dataset, val_trainsform, pr
 
             if use_refine:
                 arm_loss_l, arm_loss_c = arm_criterion((arm_loc, arm_conf), priors, targets)
-
             odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets, (arm_loc, arm_conf))
-            optimizer.zero_grad()
             if use_refine:
-                loss = 0.2 * (arm_loss_l + arm_loss_c) + 0.8 * (odm_loss_l + odm_loss_c)
+                if epoch < 50:
+                    loss = 0.5 * (arm_loss_l + arm_loss_c) + 0.5 * (odm_loss_l + odm_loss_c)
+                else:
+                    loss = 0.2 * (arm_loss_l + arm_loss_c) + 0.8 * (odm_loss_l + odm_loss_c)
             else:
                 loss = odm_loss_l + odm_loss_c
+            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             if use_refine:

@@ -98,8 +98,9 @@ class SEResNeXtFPN(nn.Module):
         self.c_num = base_channel_num
 
         # bottom up layers/stages
-        self.conv1 = self._make_conv1()   # 3 -> (7x7 x 64) -> 64 -> BN -> ReLU -> MaxPool ->64
-        self.conv2_x = self._make_stage(64, self.c_num, num_list[0], stride=1)
+        # 3 -> (7x7 x 64) -> 64 -> BN -> ReLU -> MaxPool ->64
+        self.conv1 = self._make_conv1()
+        self.conv2_x = self._make_stage(self.c_num//2, self.c_num, num_list[0], stride=1)
         self.conv3_x = self._make_stage(self.c_num, self.c_num*2,  num_list[1], stride=2)
         self.conv4_x = self._make_stage(self.c_num*2, self.c_num*4, num_list[2], stride=2)
         self.conv5_x = self._make_stage(self.c_num*4, self.c_num*8, num_list[3], stride=2)
@@ -111,10 +112,19 @@ class SEResNeXtFPN(nn.Module):
 
     def _make_conv1(self):
         return nn.Sequential(
-            nn.Conv2d(3, 64, 7, stride=2, padding=3, bias=False),  # (224-7+2*3) // 2 +1 = 112
+            nn.Conv2d(3, 32, 7, stride=2, padding=3, bias=False),  # (224-7+2*3) // 2 +1 = 112
+            nn.BatchNorm2d(32),
+            nn.ReLU6(inplace=True),
+
+            # shrink to 1/4 of original size
+            # nn.MaxPool2d(kernel_size=2, stride=2, padding=0),
+            nn.Conv2d(32, 64, 3, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(64),
             nn.ReLU6(inplace=True),
-            #nn.MaxPool2d(kernel_size=3, stride=2, padding=1)  # shrink to 1/4 of original size
+
+            nn.Conv2d(64, self.c_num//2, 3, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(self.c_num//2),
+            nn.ReLU6(inplace=True),
         )
 
     def _make_stage(self, i_ch, o_ch, num_blocks, stride=1):
@@ -232,7 +242,7 @@ class RefineSSDSEResNeXt(nn.Module):
         obm_conf_list = list()
 
         if self.use_refine:
-            for i in range(2, 4):
+            for i in range(0, 4):
                 arm_loc_list.append(self.arm_loc[i](latent_feat[i]).permute(0, 2, 3, 1).contiguous())
                 arm_conf_list.append(self.arm_conf[i](latent_feat[i]).permute(0, 2, 3, 1).contiguous())
             arm_loc_temp = torch.cat([o.view(o.size(0), -1) for o in arm_loc_list], 1)
@@ -243,7 +253,7 @@ class RefineSSDSEResNeXt(nn.Module):
             else:
                 arm_conf_result = arm_conf_temp.view(arm_conf_temp.size(0), -1, 2)
 
-        for i in range(2, 4):
+        for i in range(0, 4):
             obm_loc_list.append(self.odm_loc[i](final_feat[i]).permute(0, 2, 3, 1).contiguous())
             obm_conf_list.append(self.odm_conf[i](final_feat[i]).permute(0, 2, 3, 1).contiguous())
         obm_loc = torch.cat([o.view(o.size(0), -1) for o in obm_loc_list], 1)
