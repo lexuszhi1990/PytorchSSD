@@ -21,7 +21,7 @@ from src.data.coco import COCODet
 from src.data.voc import VOCDetection, AnnotationTransform
 from src.detector import Detector, DetectorScratch
 from src.prior_box import PriorBox
-from src.utils import load_weights
+from src.utils import setup_logger, load_weights
 from src.utils.args import get_args
 from src.utils.timer import Timer
 from src.utils.nms_wrapper import nms
@@ -177,6 +177,13 @@ if __name__ == '__main__':
     top_k = args.top_k
     nms_thresh = args.nms_thresh
     confidence_thresh = args.confidence_thresh
+
+    workspace_path = Path(workspace)
+    if not workspace_path.exists():
+        workspace_path.mkdir(parents=True)
+    log_file_path = Path(workspace).joinpath("validate-%s" % (dataset))
+    setup_logger(log_file_path.as_posix())
+
 
     gpu_ids = [int(i) for i in args.gpu_ids]
     enable_cuda = args.cuda and torch.cuda.is_available() and len(gpu_ids) > 0
