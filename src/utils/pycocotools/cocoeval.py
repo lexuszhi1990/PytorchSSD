@@ -3,6 +3,7 @@ __author__ = 'tsungyi'
 import numpy as np
 import datetime
 import time
+import logging
 from collections import defaultdict
 from . import mask as maskUtils
 import copy
@@ -65,7 +66,7 @@ class COCOeval:
         :return: None
         '''
         if not iouType:
-            print('iouType not specified. use default iouType segm')
+            logging.info('iouType not specified. use default iouType segm')
         self.cocoGt   = cocoGt              # ground truth COCO API
         self.cocoDt   = cocoDt              # detections COCO API
         self.params   = {}                  # evaluation parameters
@@ -125,13 +126,13 @@ class COCOeval:
         :return: None
         '''
         tic = time.time()
-        print('Running per image evaluation...')
+        logging.info('Running per image evaluation...')
         p = self.params
         # add backward compatibility if useSegm is specified in params
         if not p.useSegm is None:
             p.iouType = 'segm' if p.useSegm == 1 else 'bbox'
-            print('useSegm (deprecated) is not None. Running {} evaluation'.format(p.iouType))
-        print('Evaluate annotation type *{}*'.format(p.iouType))
+            logging.info('useSegm (deprecated) is not None. Running {} evaluation'.format(p.iouType))
+        logging.info('Evaluate annotation type *{}*'.format(p.iouType))
         p.imgIds = list(np.unique(p.imgIds))
         if p.useCats:
             p.catIds = list(np.unique(p.catIds))
@@ -159,7 +160,7 @@ class COCOeval:
              ]
         self._paramsEval = copy.deepcopy(self.params)
         toc = time.time()
-        print('DONE (t={:0.2f}s).'.format(toc-tic))
+        logging.info('DONE (t={:0.2f}s).'.format(toc-tic))
 
     def computeIoU(self, imgId, catId):
         p = self.params
@@ -319,10 +320,10 @@ class COCOeval:
         :param p: input params for evaluation
         :return: None
         '''
-        print('Accumulating evaluation results...')
+        logging.info('Accumulating evaluation results...')
         tic = time.time()
         if not self.evalImgs:
-            print('Please run evaluate() first')
+            logging.info('Please run evaluate() first')
         # allows input customized parameters
         if p is None:
             p = self.params
@@ -412,7 +413,7 @@ class COCOeval:
             'recall':   recall,
         }
         toc = time.time()
-        print('DONE (t={:0.2f}s).'.format( toc-tic))
+        logging.info('DONE (t={:0.2f}s).'.format( toc-tic))
 
     def summarize(self):
         '''
@@ -448,7 +449,7 @@ class COCOeval:
                 mean_s = -1
             else:
                 mean_s = np.mean(s[s>-1])
-            print(iStr.format(titleStr, typeStr, iouStr, areaRng, maxDets, mean_s))
+            logging.info(iStr.format(titleStr, typeStr, iouStr, areaRng, maxDets, mean_s))
             return mean_s
         def _summarizeDets():
             stats = np.zeros((12,))

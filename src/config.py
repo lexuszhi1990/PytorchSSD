@@ -343,11 +343,11 @@ config.list = {
         'batch_size': 16,
         'num_workers': 8,
         'shape': 320,
-        'base_lr': 4e-2,
+        'base_lr': 3e-2,
         'momentum': 0.9,
         'weight_decay': 5e-4,
         'gamma': 0.1,
-        'max_epoch': 201,
+        'max_epoch': 101,
 
         'top_k': 200,
         'confidence_thresh': 0.15,

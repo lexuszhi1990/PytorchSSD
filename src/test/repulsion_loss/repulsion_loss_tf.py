@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import tensorflow as tf
 import numpy as np
 import keras.backend as K
@@ -132,10 +134,24 @@ def create_repulsion_loss(alpha=0.5, betta=0.5,
         return y_true[..., :4], y_pred[..., :4]
 
     def _repulsion_impl(y_true, y_pred):
-        len_of_predicted = tf.shape(y_pred)[1]
 
+        # len_of_predicted: 756
+        # K.eval(y_true).shape
+        # (1, 16, 4)
+        # K.eval(y_pred).shape
+        # (1, 765, 4)
+        # K.eval(tiled_for_concat).shape
+        # (1, 765, 16, 4)
+        # K.eval(ious).shape
+        # (1, 765, 16)
+        # K.eval(ious_over_truth_boxes).shape
+        # (1, 765, 16, 5)
+
+        len_of_predicted = tf.shape(y_pred)[1]
         ious = bbox_overlap_iou(y_pred, y_true)
         tiled_for_concat = tf.tile(tf.expand_dims(y_true, axis=1), [1, len_of_predicted, 1, 1])
+
+        # predict的每个bbox与ground_truth的iou 以及相关 ground_truth的bbox
         ious_over_truth_boxes = tf.concat([tf.expand_dims(ious, axis=3), tiled_for_concat], axis=3)
 
         return tf.reduce_sum([
