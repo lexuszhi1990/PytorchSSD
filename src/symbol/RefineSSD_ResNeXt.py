@@ -46,7 +46,7 @@ class Bottleneck(nn.Module):
         self.conv3 = nn.Conv2d(s_ch, o_ch, kernel_size=1, padding=0, stride=1,      bias=False)
         self.bn3 = nn.BatchNorm2d(o_ch)
         self.scale = SEScale(o_ch)
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = nn.ReLU6(inplace=True)
         self.shortcut = nn.Sequential()  # empty Sequential module returns the original input
 
         if stride != 1 or i_ch != o_ch:  # tackle input/output size/channel mismatch during shortcut add
@@ -74,6 +74,7 @@ class LateralBlock(nn.Module):
         super(LateralBlock, self).__init__()
         self.lateral = nn.Conv2d(c_planes, base_num, 1)
         self.smooth = nn.Conv2d(base_num, base_num, 3, padding=1)
+        self.lateral_bn = nn.BatchNorm2d(base_num)
 
     def forward(self, c, p):
         """
@@ -87,6 +88,7 @@ class LateralBlock(nn.Module):
         # p = F.upsample(p, size=(H, W), mode='bilinear')
         p = p[:, :, :H, :W] + c
         p = self.smooth(p)
+        p = self.lateral_bn(p)
         return p
 
 
@@ -111,7 +113,7 @@ class SEResNeXtFPN(nn.Module):
         return nn.Sequential(
             nn.Conv2d(3, 64, 7, stride=2, padding=3, bias=False),  # (224-7+2*3) // 2 +1 = 112
             nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True),
+            nn.ReLU6(inplace=True),
             #nn.MaxPool2d(kernel_size=3, stride=2, padding=1)  # shrink to 1/4 of original size
         )
 

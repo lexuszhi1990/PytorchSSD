@@ -50,7 +50,7 @@ def train(workspace, num_classes, train_dataset, val_dataset, val_trainsform, pr
         net = torch.nn.DataParallel(net, device_ids=gpu_ids)
 
     timer = Timer()
-    mean_odm_loss_c, mean_odm_loss_l, mean_arm_loss_c, mean_arm_loss_l = 0, 0, 0, 0
+    mean_odm_loss_c, mean_odm_loss_l, mean_arm_loss_c, mean_arm_loss_l = 0., 0., 0., 0.
     arm_criterion = RefineMultiBoxLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, enable_cuda=enable_cuda)
     odm_criterion = RefineMultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.001, enable_cuda=enable_cuda)
     logging.info('Loading datasets...')
@@ -93,7 +93,7 @@ def train(workspace, num_classes, train_dataset, val_dataset, val_trainsform, pr
             if iteration % save_frequency == 0:
                 logging.info("[%d/%d] || total_loss: %.4f(mean_arm_loc_loss: %.4f mean_arm_cls_loss: %.4f mean_obm_loc_loss: %.4f mean_obm_cls_loss: %.4f) || Batch time: %.4f sec. || LR: %.6f" % (epoch, iteration, loss, mean_arm_loss_l/save_frequency, mean_arm_loss_c/save_frequency, mean_odm_loss_l/save_frequency, mean_odm_loss_c/save_frequency, timer.average_time, optimizer.param_groups[0]['lr']))
                 timer.clear()
-                mean_odm_loss_c, mean_odm_loss_l, mean_arm_loss_c, mean_arm_loss_l = 0, 0, 0, 0
+                mean_odm_loss_c, mean_odm_loss_l, mean_arm_loss_c, mean_arm_loss_l = 0., 0., 0., 0.
 
         if epoch % save_frequency == 0:
             net.eval()
