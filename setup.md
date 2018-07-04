@@ -342,4 +342,4 @@ CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --workspace ./workspace/t
 
 
 
-CUDA_VISIBLE_DEVICES=1 python train.py --dataset COCO --gpu_ids 0 --cuda --workspace /mnt/ckpt/pytorchSSD/RefineDet_Renset/v1 --config_id r1
+CUDA_VISIBLE_DEVICES=4,5 python train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/RefineDet_Renset/v1 --config_id r1
