@@ -340,7 +340,7 @@ CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --workspace ./workspace/t
 CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --workspace ./workspace/train-v6 --ckpt_path ckpt/train-v6-refinedet_model-190.pth --eval_img ./samples/ebike-three.jpg --config_id v6
 ```
 
-CUDA_VISIBLE_DEVICES=4,5 python train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/RefineDet_Renset/v1 --config_id r1
+CUDA_VISIBLE_DEVICES=4,5 python train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/RefineDet_Renset/v1 --config_id r1 --resume 70
 
 
 ### 2018.7.5
@@ -407,6 +407,23 @@ config v6:
 ```
 CUDA_VISIBLE_DEVICES=0 python val.py --dataset COCO --gpu_ids 0 --cuda --workspace ./workspace/train-v6 --config_id v6 --ckpt_path ./ckpt/train-v6-refinedet_model-190.pth
 
-CUDA_VISIBLE_DEVICES=1 python refinedet_mobile_val.py --dataset COCO --gpu_ids 0 --cuda --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v6/refinedet_model-190.pth  --config_id v6
+CUDA_VISIBLE_DEVICES=1 python refinedet_mobile_val.py --dataset COCO --gpu_ids 0 --cuda --ckpt_path ./ckpt/train-v6-refinedet_model-190.pth  --config_id v6
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.076
+INFO:root: Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.143
+INFO:root: Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.071
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.014
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.086
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.128
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.112
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.143
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.145
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.024
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.153
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.253
+```
 
+train with repulsion loss:
+
+```
+CUDA_VISIBLE_DEVICES=0 python refinedet_mobile_train.py --dataset COCO --gpu_ids 0 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v5-t --config_id v5
 ```

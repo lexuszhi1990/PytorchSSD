@@ -223,9 +223,9 @@ class RefineSSDSEResNeXt(nn.Module):
                     name = k
                 new_state_dict[name] = v
             self.load_state_dict(new_state_dict)
+            logging.info("load weights from %s" % ckpt_path)
         else:
             self.feature_net.initialize_base_weights()
-            logging.info("load weights from %s" % ckpt_path)
             self.odm_loc.apply(kaiming_weights_init)
             self.odm_conf.apply(kaiming_weights_init)
             if self.use_refine:

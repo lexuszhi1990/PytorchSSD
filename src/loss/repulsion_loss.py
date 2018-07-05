@@ -47,7 +47,6 @@ class RepulsionLoss(nn.Module):
         target_loc = torch.Tensor(num, num_priors, 4)
         target_box = torch.Tensor(num, num_priors, 4)
         target_score = torch.LongTensor(num, num_priors)
-
         for idx in range(num):
             gt_loc = gt_data[idx][:,:-1].data
             gt_cls = gt_data[idx][:,-1].data

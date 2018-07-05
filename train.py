@@ -31,7 +31,7 @@ from src.symbol.RefineSSD_mobilenet_v2 import RefineSSDMobileNet
 from src.symbol.RefineSSD_ResNeXt import RefineSSDSEResNeXt
 from refinedet_mobile_val import val
 
-def train(workspace, num_classes, train_dataset, val_dataset, val_trainsform, priors, detector, base_channel_num, width_mult, use_refine,batch_size, num_workers, shape, base_lr, momentum, weight_decay, gamma, max_epoch=200, resume=False, resume_epoch=0, save_frequency=10, enable_cuda=False, gpu_ids=[], enable_visdom=False, prefix='refinedet_model'):
+def train(workspace, num_classes, train_dataset, val_dataset, val_trainsform, priors, detector, base_channel_num, width_mult, use_refine,batch_size, num_workers, shape, base_lr, momentum, weight_decay, gamma, max_epoch=200, resume_epoch=0, save_frequency=10, enable_cuda=False, gpu_ids=[], enable_visdom=False, prefix='refinedet_model'):
 
     if enable_visdom:
         viz = visdom.Visdom()
@@ -44,7 +44,8 @@ def train(workspace, num_classes, train_dataset, val_dataset, val_trainsform, pr
     # net = RefineSSDMobileNet(num_classes, base_channel_num=base_channel_num, width_mult=width_mult, use_refine=use_refine)
     net = RefineSSDSEResNeXt(num_classes=num_classes, base_channel_num=base_channel_num, use_refine=use_refine)
 
-    net.initialize_weights()
+    ckpt_path = workspace_path.joinpath("%s-%d.pth" %(prefix, resume_epoch))
+    net.initialize_weights(ckpt_path)
     logging.info(net)
     if enable_cuda and len(gpu_ids) > 0:
         net = torch.nn.DataParallel(net, device_ids=gpu_ids)
@@ -59,7 +60,7 @@ def train(workspace, num_classes, train_dataset, val_dataset, val_trainsform, pr
     # optimizer = optim.RMSprop(net.parameters(), lr=base_lr, alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
     optimizer = optim.SGD(net.parameters(), lr=base_lr, momentum=momentum, weight_decay=weight_decay)
     scheduler = MultiStepLR(optimizer, milestones=[ i*6 for i in range(1, max_epoch//6) ], gamma=0.75)
-    for epoch in range(max_epoch):
+    for epoch in range(resume_epoch, max_epoch):
         net.train()
         scheduler.step()
         for iteration, (images, targets) in enumerate(train_dataset_loader):
@@ -123,7 +124,6 @@ if __name__ == '__main__':
     batch_size = args.batch_size
     dataset = args.dataset.upper()
     prefix = args.prefix
-    resume = args.resume
     resume_epoch = args.resume_epoch
     save_frequency = args.save_frequency
     enable_visdom = args.visdom
@@ -160,4 +160,4 @@ if __name__ == '__main__':
         train_dataset = COCODet(root_path, module_cfg['train_sets'], preproc(img_dim, rgb_means, rgb_std, augment_ratio))
         val_dataset = COCODet(root_path, module_cfg['val_sets'], None)
 
-    train(workspace, module_cfg['num_classes'], train_dataset, val_dataset, val_trainsform, priors, detector, module_cfg['base_channel_num'], module_cfg['width_mult'], module_cfg['use_refine'], module_cfg['batch_size'], module_cfg['num_workers'], module_cfg['shape'], module_cfg['base_lr'], module_cfg['momentum'], module_cfg['weight_decay'], module_cfg['gamma'], module_cfg['max_epoch'], resume, resume_epoch, save_frequency, enable_cuda, gpu_ids, enable_visdom, prefix)
+    train(workspace, module_cfg['num_classes'], train_dataset, val_dataset, val_trainsform, priors, detector, module_cfg['base_channel_num'], module_cfg['width_mult'], module_cfg['use_refine'], module_cfg['batch_size'], module_cfg['num_workers'], module_cfg['shape'], module_cfg['base_lr'], module_cfg['momentum'], module_cfg['weight_decay'], module_cfg['gamma'], module_cfg['max_epoch'], resume_epoch, save_frequency, enable_cuda, gpu_ids, enable_visdom, prefix)
