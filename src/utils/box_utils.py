@@ -216,7 +216,7 @@ def refine_match(threshold, gt_loc, gt_cls, priors, arm_loc, variances):
     # conf : [num_priors] top class label for each prior
     return loc, conf
 
-def rep_match(threshold, gt_loc, gt_cls, priors, variances):
+def rep_match(threshold, gt_loc, gt_cls, pred_loc, priors, variances, arm_loc=None):
     """Match each prior box with the ground truth box of the highest jaccard
     overlap, encode the bounding boxes, then return the matched indices
     corresponding to both confidence and location preds.
@@ -254,12 +254,23 @@ def rep_match(threshold, gt_loc, gt_cls, priors, variances):
     for j in range(best_prior_idx.size(0)):
         best_truth_idx[best_prior_idx[j]] = j
 
-    matches = gt_loc[best_truth_idx]          # Shape: [num_priors,4]
-    conf = gt_cls[best_truth_idx]             # Shape: [num_priors]
-    conf[best_truth_overlap < threshold] = 0  # label as background
-    loc = encode(matches, priors, variances)
+    matches_gt = gt_loc[best_truth_idx]          # Shape: [num_priors,4]
+    matches_gt_loc = encode(matches_gt, priors, variances)
 
-    return loc, conf
+    # conf = gt_cls[best_truth_idx]             # Shape: [num_priors]
+    # conf[best_truth_overlap < threshold] = 0  # label as background
+    # decoded_pred_loc = decode(pred_loc, priors, variances)
+    # gt_pred_overlaps = jaccard(gt_loc, decoded_pred_loc)
+    # top_num = min(gt_loc.size(0), 2)
+
+    # TODO: select the second largest IoU target from the same class
+    gt_pred_overlaps.scatter_(0, torch.unsqueeze(best_truth_idx, 0), -1)
+    _, second_truth_idx = gt_pred_overlaps.max(0, keepdim=True)
+    second_truth_idx.squeeze_(0)
+    matches_rep_gt = gt_loc[second_truth_idx]
+    matches_rep_gt_loc = encode(matches_rep_gt, priors, variances)
+
+    return matches_gt_loc, matches_rep_gt_loc
 
 
 def encode(matched, priors, variances):

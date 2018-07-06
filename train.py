@@ -29,7 +29,7 @@ from src.utils.nms_wrapper import nms
 from src.symbol.RefineSSD_vgg import RefineSSDVGG
 from src.symbol.RefineSSD_mobilenet_v2 import RefineSSDMobileNet
 from src.symbol.RefineSSD_ResNeXt import RefineSSDSEResNeXt
-from refinedet_mobile_val import val
+from val import val
 
 def train(workspace, num_classes, train_dataset, val_dataset, val_trainsform, priors, detector, base_channel_num, width_mult, use_refine,batch_size, num_workers, shape, base_lr, momentum, weight_decay, gamma, max_epoch=200, resume_epoch=0, save_frequency=10, enable_cuda=False, gpu_ids=[], enable_visdom=False, prefix='refinedet_model'):
 
@@ -53,6 +53,7 @@ def train(workspace, num_classes, train_dataset, val_dataset, val_trainsform, pr
     timer = Timer()
     mean_odm_loss_c, mean_odm_loss_l, mean_arm_loss_c, mean_arm_loss_l = 0., 0., 0., 0.
     arm_criterion = RefineMultiBoxLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, enable_cuda=enable_cuda)
+    arm_repulsion_criterion = RepulsionLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.001, enable_cuda=enable_cuda)
     odm_criterion = RefineMultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.001, enable_cuda=enable_cuda)
     logging.info('Loading datasets...')
     train_dataset_loader = data.DataLoader(train_dataset, batch_size, shuffle=True, num_workers=num_workers, collate_fn=detection_collate)
@@ -77,6 +78,7 @@ def train(workspace, num_classes, train_dataset, val_dataset, val_trainsform, pr
 
             if use_refine:
                 arm_loss_l, arm_loss_c = arm_criterion((arm_loc, arm_conf), priors, targets)
+                arm_repulsion_criterion((arm_loc, arm_conf), priors, targets)
             odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets, (arm_loc, arm_conf))
             if use_refine:
                 if epoch < 50:
@@ -121,7 +123,6 @@ if __name__ == '__main__':
 
     args = get_args()
     workspace = args.workspace
-    batch_size = args.batch_size
     dataset = args.dataset.upper()
     prefix = args.prefix
     resume_epoch = args.resume_epoch

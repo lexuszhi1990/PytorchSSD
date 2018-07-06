@@ -54,11 +54,10 @@ class RepulsionLoss(nn.Module):
             if arm_loc is None:
                 assert self.num_classes == 2, "num_classes in arm branch should be 2, not %d" % (self.num_classes)
                 gt_cls = gt_cls > self.bg_class_id
-                target_loc[idx], target_score[idx] = match(self.overlap_thresh, gt_loc, gt_cls, priors.data, self.variance)
 
-                target_box[idx] = rep_match(self.overlap_thresh, gt_loc, gt_cls, priors.data, self.variance)
+                target_loc[idx], target_box[idx] = rep_match(self.overlap_thresh, gt_loc, gt_cls, pred_loc[idx].data, priors.data, self.variance)
             else:
-                target_loc[idx], target_score[idx] = refine_match(self.overlap_thresh, gt_loc, gt_cls, priors.data, arm_loc[idx].data, self.variance)
+                target_loc[idx], target_box[idx] = rep_refine_match(self.overlap_thresh, gt_loc, gt_cls, pred_loc[idx].data, priors.data, self.variance)
 
         import pdb
         pdb.set_trace()
