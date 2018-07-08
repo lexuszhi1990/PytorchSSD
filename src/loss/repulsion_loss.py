@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 # from src.utils.box_utils import IoG, decode_new
 
-from src.utils.box_utils import match, refine_match, rep_match, log_sum_exp
+from src.utils.box_utils import rep_match, decode
 
 class RepulsionLoss(nn.Module):
     def __init__(self, num_classes=2, variance=[0.1, 0.2], sigma=0., overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.01, bg_class_id=0, enable_cuda=False, filter_arm_object=False):
@@ -45,22 +45,32 @@ class RepulsionLoss(nn.Module):
         num_priors = (priors.size(0))
 
         target_loc = torch.Tensor(num, num_priors, 4)
-        target_box = torch.Tensor(num, num_priors, 4)
         target_score = torch.LongTensor(num, num_priors)
         for idx in range(num):
             gt_loc = gt_data[idx][:,:-1].data
             gt_cls = gt_data[idx][:,-1].data
-            # for arm branch
-            if arm_loc is None:
-                assert self.num_classes == 2, "num_classes in arm branch should be 2, not %d" % (self.num_classes)
-                gt_cls = gt_cls > self.bg_class_id
+            target_loc[idx], target_score[idx] = rep_match(self.overlap_thresh, gt_loc, gt_cls, pred_loc[idx].data, priors.data, self.variance, arm_loc)
 
-                target_loc[idx], target_box[idx] = rep_match(self.overlap_thresh, gt_loc, gt_cls, pred_loc[idx].data, priors.data, self.variance)
-            else:
-                target_loc[idx], target_box[idx] = rep_refine_match(self.overlap_thresh, gt_loc, gt_cls, pred_loc[idx].data, priors.data, self.variance)
+        if self.enable_cuda:
+            target_loc = target_loc.cuda()
+            target_score = target_score.cuda()
+        target_loc = Variable(target_loc, requires_grad=False)
+        target_score = Variable(target_score, requires_grad=False)
+
+        pos = target_score > 0
+        pos_idx = pos.unsqueeze(pos.dim()).expand_as(pred_loc)
+
 
         import pdb
         pdb.set_trace()
+        pred_loc_ = pred_loc[pos_idx].view(-1, 4)
+        target_loc_ = target_loc[pos_idx].view(-1, 4)
+        priors_loc_ = priors[pos_idx].view(-1, 4)
+
+        decode(pred_loc, priors.data, self.variance)
+        decode(pred_loc_, priors_loc_, variances=self.variance)
+        decode(pred_loc_, Variable(priors_loc_.data, requires_grad=False), variances=self.variance)
+
 
 
     # def forward(self, loc_data, ground_data, prior_data):

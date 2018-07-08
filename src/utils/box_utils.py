@@ -38,26 +38,6 @@ def IoG(box_a, box_b):
     return I / G
 
 
-def decode_new(loc, priors, variances):
-    """Decode locations from predictions using priors to undo
-    the encoding we did for offset regression at train time.
-    Args:
-        loc (tensor): location predictions for loc layers,
-            Shape: [num_priors,4]
-        priors (tensor): Prior boxes in center-offset form.
-            Shape: [num_priors,4].
-        variances: (list[float]) Variances of priorboxes
-    Return:
-        decoded bounding box predictions
-    """
-    boxes = torch.cat((
-        priors[:, :2] + loc[:, :2] * variances[0] * priors[:, 2:],
-        priors[:, 2:] * torch.exp(loc[:, 2:] * variances[1])), 1)
-    boxes[:, :2] = boxes[:, :2] - boxes[:, 2:] / 2
-    boxes[:, 2:] = boxes[:, 2:] + boxes[:, :2]
-    return boxes
-
-
 def center_size(boxes):
     """ Convert prior_boxes to (cx, cy, w, h)
     representation for comparison to center-size form ground truth data.
@@ -234,10 +214,15 @@ def rep_match(threshold, gt_loc, gt_cls, pred_loc, priors, variances, arm_loc=No
         The matched indices corresponding to 1)location and 2)confidence preds.
     """
     # jaccard index
-    overlaps = jaccard(
-        gt_loc,
-        point_form(priors)
-    )
+
+    if arm_loc is None:
+        target_hw_loc = point_form(priors)
+        target_loc = priors
+    else:
+        target_hw_loc = target_loc
+        target_loc = decode(arm_loc, priors=priors, variances=variances)
+
+    overlaps = jaccard(gt_loc, target_hw_loc)
     # (Bipartite Matching)
     best_prior_overlap, best_prior_idx = overlaps.max(1, keepdim=True)
     # [1,num_priors] best ground truth for each prior
@@ -247,30 +232,23 @@ def rep_match(threshold, gt_loc, gt_cls, pred_loc, priors, variances, arm_loc=No
     best_truth_overlap.squeeze_(0)
     best_prior_idx.squeeze_(1)
     best_prior_overlap.squeeze_(1)
-
     best_truth_overlap.index_fill_(0, best_prior_idx, 2)  # ensure best prior
     # TODO refactor: index best_prior_idx with long tensor
     # ensure every gt matches with its prior of max overlap
     for j in range(best_prior_idx.size(0)):
         best_truth_idx[best_prior_idx[j]] = j
-
-    matches_gt = gt_loc[best_truth_idx]          # Shape: [num_priors,4]
-    matches_gt_loc = encode(matches_gt, priors, variances)
-
-    # conf = gt_cls[best_truth_idx]             # Shape: [num_priors]
-    # conf[best_truth_overlap < threshold] = 0  # label as background
-    # decoded_pred_loc = decode(pred_loc, priors, variances)
-    # gt_pred_overlaps = jaccard(gt_loc, decoded_pred_loc)
-    # top_num = min(gt_loc.size(0), 2)
+    gt_conf = gt_cls[best_truth_idx]             # Shape: [num_priors]
+    gt_conf[best_truth_overlap < threshold] = 0  # label as background
 
     # TODO: select the second largest IoU target from the same class
+    decoded_pred_loc = decode(pred_loc, target_loc, variances)
+    gt_pred_overlaps = jaccard(gt_loc, decoded_pred_loc)
     gt_pred_overlaps.scatter_(0, torch.unsqueeze(best_truth_idx, 0), -1)
     _, second_truth_idx = gt_pred_overlaps.max(0, keepdim=True)
     second_truth_idx.squeeze_(0)
-    matches_rep_gt = gt_loc[second_truth_idx]
-    matches_rep_gt_loc = encode(matches_rep_gt, priors, variances)
+    matches_rep_gt_loc = gt_loc[second_truth_idx]
 
-    return matches_gt_loc, matches_rep_gt_loc
+    return matches_rep_gt_loc, gt_conf
 
 
 def encode(matched, priors, variances):
