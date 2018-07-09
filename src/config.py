@@ -264,8 +264,8 @@ config.list = {
         'width_mult': 0.75,
         'base_channel_num': 128,
         'use_refine': True,
-        'batch_size': 192,
-        'num_workers': 36,
+        'batch_size': 360,
+        'num_workers': 8,
         'shape': 320,
         'base_lr': 4e-2,
         'momentum': 0.9,
@@ -350,7 +350,7 @@ config.list = {
 
     # resnet config
     "r1" : {
-
+        'model_name' : 'RefineSSDSEResNeXt',
         'train_sets' : 'person_train2017',
         'val_sets' : 'person_val2017',
         'num_classes' : 2,

@@ -434,8 +434,12 @@ CUDA_VISIBLE_DEVICES=0 python demo.py --workspace ./workspace/train-r1 --ckpt_pa
 
 ### 2018.7.9
 
-priori_bbox: center
+test r1:
+```
+CUDA_VISIBLE_DEVICES=6 python val.py --dataset COCO --gpu_ids 0 --cuda --workspace ./workspace/val-r1 --config_id r1 --ckpt_path ./ckpt/train-r1-Final-refineDet-200.pth
+```
 
-
-
+train repulsion loss:
+```
 CUDA_VISIBLE_DEVICES=4 python train.py --dataset COCO --gpu_ids 0 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v3-repulsion --config_id v3
+```

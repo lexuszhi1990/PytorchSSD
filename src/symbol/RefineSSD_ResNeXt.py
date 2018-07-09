@@ -175,7 +175,7 @@ class SEResNeXtFPN(nn.Module):
 
 
 class RefineSSDSEResNeXt(nn.Module):
-    def __init__(self, num_classes=81, use_refine=True, base_channel_num=256, base_mbox=3):
+    def __init__(self, num_classes=81, use_refine=True, base_channel_num=256, base_mbox=3, width_mult=1.):
         super(RefineSSDSEResNeXt, self).__init__()
         self.use_refine = use_refine
 

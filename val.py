@@ -118,7 +118,8 @@ if __name__ == '__main__':
     priors = Variable(priorbox.forward(), volatile=True)
     detector = Detector(module_cfg['num_classes'], top_k=module_cfg['top_k'], conf_thresh=module_cfg['confidence_thresh'], nms_thresh=module_cfg['nms_thresh'], variance=module_cfg['variance'])
 
-    net = RefineSSDMobileNet(module_cfg['num_classes'], base_channel_num=module_cfg['base_channel_num'], width_mult=module_cfg['width_mult'], use_refine=module_cfg['use_refine'])
+    module_lib = globals()[module_cfg['model_name']]
+    net = module_lib(module_cfg['num_classes'], base_channel_num=module_cfg['base_channel_num'], width_mult=module_cfg['width_mult'], use_refine=module_cfg['use_refine'])
     if dataset == "VOC":
         val_dataset = VOCDetection(root_path, module_cfg['val_sets'], None, AnnotationTransform())
     elif dataset == "COCO":
