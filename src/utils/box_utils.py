@@ -219,8 +219,8 @@ def rep_match(threshold, gt_loc, gt_cls, pred_loc, priors, variances, arm_loc=No
         target_hw_loc = point_form(priors)
         target_loc = priors
     else:
-        target_hw_loc = target_loc
-        target_loc = decode(arm_loc, priors=priors, variances=variances)
+        target_hw_loc = decode(arm_loc, priors=priors, variances=variances) # decode arm
+        target_loc = center_size(target_hw_loc)
 
     overlaps = jaccard(gt_loc, target_hw_loc)
     # (Bipartite Matching)
@@ -248,7 +248,7 @@ def rep_match(threshold, gt_loc, gt_cls, pred_loc, priors, variances, arm_loc=No
     second_truth_idx.squeeze_(0)
     matches_rep_gt_loc = gt_loc[second_truth_idx]
 
-    return matches_rep_gt_loc, gt_conf
+    return matches_rep_gt_loc, gt_conf, decoded_pred_loc
 
 
 def encode(matched, priors, variances):
