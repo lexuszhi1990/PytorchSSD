@@ -31,7 +31,7 @@ from src.symbol.RefineSSD_mobilenet_v2 import RefineSSDMobileNet
 from src.symbol.RefineSSD_ResNeXt import RefineSSDSEResNeXt
 from val import val
 
-def train(workspace, num_classes, train_dataset, val_dataset, val_trainsform, priors, detector, base_channel_num, width_mult, use_refine,batch_size, num_workers, shape, base_lr, momentum, weight_decay, gamma, max_epoch=200, resume_epoch=0, save_frequency=10, enable_cuda=False, gpu_ids=[], enable_visdom=False, prefix='refinedet_model'):
+def train(workspace, num_classes, train_dataset, val_dataset, val_trainsform, priors, detector, base_channel_num, width_mult, use_refine,batch_size, num_workers, shape, base_lr, momentum, weight_decay, gamma, max_epoch=200, resume_epoch=0, inteval=10, enable_cuda=False, gpu_ids=[], enable_visdom=False, prefix='refinedet_model'):
 
     if enable_visdom:
         viz = visdom.Visdom()
@@ -51,10 +51,10 @@ def train(workspace, num_classes, train_dataset, val_dataset, val_trainsform, pr
         net = torch.nn.DataParallel(net, device_ids=gpu_ids)
 
     timer = Timer()
-    mean_odm_loss_c, mean_odm_loss_l, mean_arm_loss_c, mean_arm_loss_l = 0., 0., 0., 0.
     arm_criterion = RefineMultiBoxLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, enable_cuda=enable_cuda)
     arm_repulsion_criterion = RepulsionLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.001, enable_cuda=enable_cuda)
     odm_criterion = RefineMultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.001, enable_cuda=enable_cuda)
+    odm_repulsion_criterion = RepulsionLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.001, enable_cuda=enable_cuda)
     logging.info('Loading datasets...')
     train_dataset_loader = data.DataLoader(train_dataset, batch_size, shuffle=True, num_workers=num_workers, collate_fn=detection_collate)
 
@@ -78,29 +78,25 @@ def train(workspace, num_classes, train_dataset, val_dataset, val_trainsform, pr
 
             if use_refine:
                 arm_loss_l, arm_loss_c = arm_criterion((arm_loc, arm_conf), priors, targets)
-                arm_repulsion_criterion((arm_loc, arm_conf), priors, targets)
+                arm_rep_loss = arm_repulsion_criterion((arm_loc, arm_conf), priors, targets)
             odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets, (arm_loc, arm_conf))
+            odm_rep_loss = odm_repulsion_criterion((odm_loc, odm_conf), priors, targets, (arm_loc, arm_conf))
+
             if use_refine:
                 if epoch < 50:
-                    loss = 0.5 * (arm_loss_l + arm_loss_c) + 0.5 * (odm_loss_l + odm_loss_c)
+                    loss = 0.5 * (arm_loss_l + arm_loss_c + arm_rep_loss) + 0.5 * (odm_loss_l + odm_loss_c + odm_rep_loss)
                 else:
-                    loss = 0.2 * (arm_loss_l + arm_loss_c) + 0.8 * (odm_loss_l + odm_loss_c)
+                    loss = 0.2 * (arm_loss_l + arm_loss_c + arm_rep_loss) + 0.8 * (odm_loss_l + odm_loss_c + odm_rep_loss)
             else:
                 loss = odm_loss_l + odm_loss_c
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            if use_refine:
-                mean_arm_loss_c += arm_loss_c.data[0]
-                mean_arm_loss_l += arm_loss_l.data[0]
-            mean_odm_loss_l += odm_loss_l.data[0]
-            mean_odm_loss_c += odm_loss_c.data[0]
-            if iteration % save_frequency == 0:
-                logging.info("[%d/%d] || total_loss: %.4f(mean_arm_loc_loss: %.4f mean_arm_cls_loss: %.4f mean_obm_loc_loss: %.4f mean_obm_cls_loss: %.4f) || Batch time: %.4f sec. || LR: %.6f" % (epoch, iteration, loss, mean_arm_loss_l/save_frequency, mean_arm_loss_c/save_frequency, mean_odm_loss_l/save_frequency, mean_odm_loss_c/save_frequency, timer.average_time, optimizer.param_groups[0]['lr']))
+            if iteration % inteval == 0:
+                logging.info("[%d/%d] || total_loss: %.4f(arm_loc_loss: %.4f, arm_cls_loss: %.4f, , arm_rep_loss: %.4f, obm_loc_loss: %.4f, obm_cls_loss: %.4f, odm_rep_loss: %.4f) || Batch time: %.4f sec. || LR: %.6f" % (epoch, iteration, loss, arm_loss_l.data[0], arm_loss_c.data[0], arm_rep_loss.data[0], odm_loss_l.data[0], odm_loss_c.data[0], odm_rep_loss.data[0], timer.average_time, optimizer.param_groups[0]['lr']))
                 timer.clear()
-                mean_odm_loss_c, mean_odm_loss_l, mean_arm_loss_c, mean_arm_loss_l = 0., 0., 0., 0.
 
-        if epoch % save_frequency == 0:
+        if epoch % inteval == 0:
             net.eval()
             save_ckpt_path = workspace_path.joinpath("%s-%d.pth" %(prefix, epoch))
             torch.save(net.state_dict(), save_ckpt_path)
@@ -126,7 +122,7 @@ if __name__ == '__main__':
     dataset = args.dataset.upper()
     prefix = args.prefix
     resume_epoch = args.resume_epoch
-    save_frequency = args.save_frequency
+    inteval = args.inteval
     enable_visdom = args.visdom
     gpu_ids = [int(i) for i in args.gpu_ids]
     enable_cuda = args.cuda and torch.cuda.is_available() and len(gpu_ids) > 0
@@ -161,4 +157,4 @@ if __name__ == '__main__':
         train_dataset = COCODet(root_path, module_cfg['train_sets'], preproc(img_dim, rgb_means, rgb_std, augment_ratio))
         val_dataset = COCODet(root_path, module_cfg['val_sets'], None)
 
-    train(workspace, module_cfg['num_classes'], train_dataset, val_dataset, val_trainsform, priors, detector, module_cfg['base_channel_num'], module_cfg['width_mult'], module_cfg['use_refine'], module_cfg['batch_size'], module_cfg['num_workers'], module_cfg['shape'], module_cfg['base_lr'], module_cfg['momentum'], module_cfg['weight_decay'], module_cfg['gamma'], module_cfg['max_epoch'], resume_epoch, save_frequency, enable_cuda, gpu_ids, enable_visdom, prefix)
+    train(workspace, module_cfg['num_classes'], train_dataset, val_dataset, val_trainsform, priors, detector, module_cfg['base_channel_num'], module_cfg['width_mult'], module_cfg['use_refine'], module_cfg['batch_size'], module_cfg['num_workers'], module_cfg['shape'], module_cfg['base_lr'], module_cfg['momentum'], module_cfg['weight_decay'], module_cfg['gamma'], module_cfg['max_epoch'], resume_epoch, inteval, enable_cuda, gpu_ids, enable_visdom, prefix)

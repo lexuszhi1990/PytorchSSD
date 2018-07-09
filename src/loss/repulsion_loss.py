@@ -43,12 +43,12 @@ class RepulsionLoss(nn.Module):
             return diff - 0.5 / sigma_squared
 
     def repulsion_term_gt(self, iogs, sigma=0.5):
-        # TODO: make all box are second ground-truth bbox, witch their iog should less than 1.0
-        iogs = iogs[iogs < 0.95]
+        # remove the iogs when only one label in image
+        iogs = iogs[iogs != 1.]
 
         iogs_l = iogs[iogs < sigma]
         iogs_h = iogs[iogs >= sigma]
-        iogs_l_loss = torch.sum(-torch.log(1 - iogs_l + 1e-7))
+        iogs_l_loss = torch.sum(-torch.log(1 - iogs_l + 1e-10))
         iogs_h_loss = torch.sum((iogs_h - sigma) / (1 - sigma) - np.log(1 - sigma))
 
         return iogs_l_loss + iogs_h_loss
@@ -68,6 +68,7 @@ class RepulsionLoss(nn.Module):
         arm_loc, arm_conf = arm_data
         num = pred_loc.size(0)
         num_priors = (priors.size(0))
+        arm_loc_data = None
 
         target_loc = torch.Tensor(num, num_priors, 4)
         decoded_pred_loc = torch.Tensor(num, num_priors, 4)
@@ -75,7 +76,10 @@ class RepulsionLoss(nn.Module):
         for idx in range(num):
             gt_loc = gt_data[idx][:,:-1].data
             gt_cls = gt_data[idx][:,-1].data
-            target_loc[idx], target_score[idx], decoded_pred_loc[idx] = rep_match(self.overlap_thresh, gt_loc, gt_cls, pred_loc[idx].data, priors.data, self.variance, arm_loc)
+
+            if arm_loc is not None:
+                arm_loc_data = arm_loc[idx].data
+            target_loc[idx], target_score[idx], decoded_pred_loc[idx] = rep_match(self.overlap_thresh, gt_loc, gt_cls, pred_loc[idx].data, priors.data, self.variance, arm_loc_data)
 
         if self.enable_cuda:
             target_loc = target_loc.cuda()

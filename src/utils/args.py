@@ -16,7 +16,7 @@ def get_args():
     parser.add_argument('--visdom', action="store_true", default=False, help='Use visdom to for loss visualization')
     parser.add_argument('--resume', action="store_true", default=False, help='resume net for retraining')
     parser.add_argument('--resume_epoch', default=0, type=int, help='resume iter for retraining')
-    parser.add_argument('--save_frequency', default=10, type=int, help='epoch for saving ckpt')
+    parser.add_argument('--inteval', default=10, type=int, help='epoch for saving ckpt')
 
 
     # network config

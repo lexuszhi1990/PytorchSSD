@@ -217,10 +217,10 @@ def rep_match(threshold, gt_loc, gt_cls, pred_loc, priors, variances, arm_loc=No
 
     if arm_loc is None:
         target_hw_loc = point_form(priors)
-        target_loc = priors
+        decoded_priors_loc = priors
     else:
         target_hw_loc = decode(arm_loc, priors=priors, variances=variances) # decode arm
-        target_loc = center_size(target_hw_loc)
+        decoded_priors_loc = center_size(target_hw_loc)
 
     overlaps = jaccard(gt_loc, target_hw_loc)
     # (Bipartite Matching)
@@ -232,7 +232,7 @@ def rep_match(threshold, gt_loc, gt_cls, pred_loc, priors, variances, arm_loc=No
     best_truth_overlap.squeeze_(0)
     best_prior_idx.squeeze_(1)
     best_prior_overlap.squeeze_(1)
-    best_truth_overlap.index_fill_(0, best_prior_idx, 2)  # ensure best prior
+    best_truth_overlap.index_fill_(0, best_prior_idx, 2)
     # TODO refactor: index best_prior_idx with long tensor
     # ensure every gt matches with its prior of max overlap
     for j in range(best_prior_idx.size(0)):
@@ -241,7 +241,7 @@ def rep_match(threshold, gt_loc, gt_cls, pred_loc, priors, variances, arm_loc=No
     gt_conf[best_truth_overlap < threshold] = 0  # label as background
 
     # TODO: select the second largest IoU target from the same class
-    decoded_pred_loc = decode(pred_loc, target_loc, variances)
+    decoded_pred_loc = decode(pred_loc, decoded_priors_loc, variances)
     gt_pred_overlaps = jaccard(gt_loc, decoded_pred_loc)
     gt_pred_overlaps.scatter_(0, torch.unsqueeze(best_truth_idx, 0), -1)
     _, second_truth_idx = gt_pred_overlaps.max(0, keepdim=True)
