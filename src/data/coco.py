@@ -77,7 +77,8 @@ class COCODet(data.Dataset):
         """
         # Example image path for index=119993:
         #   coco/images/train2017/000000119993.jpg
-        image_path = Path(self.root, 'images', self.image_set.split('_')[-1], str(index).zfill(12) + '.jpg')
+        # image_path = Path(self.root, 'images', self.image_set.split('_')[-1], str(index).zfill(12) + '.jpg')
+        image_path = Path(self.root, 'images', self.image_set, str(index).zfill(12) + '.jpg')
         assert image_path.exists(), "%s not exists" % image_path
         return image_path.as_posix()
 
