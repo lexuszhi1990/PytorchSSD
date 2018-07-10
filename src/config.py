@@ -269,9 +269,9 @@ config.list = {
         'shape': 320,
         'base_lr': 5e-2,
         'momentum': 0.9,
-        'weight_decay': 5e-4,
+        'weight_decay': 4e-4,
         'gamma': 0.1,
-        'max_epoch': 200,
+        'max_epoch': 101,
 
         'top_k': 200,
         'confidence_thresh': 0.01,
