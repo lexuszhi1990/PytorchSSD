@@ -384,6 +384,42 @@ config.list = {
         'nms_thresh': 0.45,
     },
 
+
+    # resnet config
+    "c1" : {
+        'model_name' : 'RefineSSDSEResNeXt',
+        'train_sets' : 'train_a',
+        'val_sets' : 'train_b',
+        'num_classes' : 2,
+
+        'feature_maps': [40, 20, 10, 5],
+        'min_dim': 320,
+        'steps': [8, 16, 32, 64],
+        'min_sizes': [32, 64, 128, 256],
+        'max_sizes': [],
+        'aspect_ratios': [[3], [3], [3], [3]],
+        'variance': [0.1, 0.2],
+        'clip': True,
+
+        'width_mult': 1.,
+        'base_channel_num': 256,
+        'use_refine': True,
+        'batch_size': 16,
+        'num_workers': 2,
+        'shape': 320,
+        'base_lr': 3e-2,
+        'momentum': 0.9,
+        'weight_decay': 5e-4,
+        'gamma': 0.1,
+        'max_epoch': 201,
+
+        'top_k': 200,
+        'confidence_thresh': 0.15,
+        # 'top_k': 200,
+        # 'confidence_thresh': 0.01,
+        'nms_thresh': 0.45,
+    },
+
     "v-test" : {
         # 'shape': [320, 320], # [width, height]
         # 'feature_maps': [[40, 40], [20, 20], [10, 10], [5, 5]],
@@ -399,7 +435,6 @@ config.list = {
         'max_sizes': [],
         'variance': [0.1, 0.2],
         'clip': True,
-        # 'min_dim': 320,
 
         'width_mult': 0.75,
         'base_channel_num': 128,

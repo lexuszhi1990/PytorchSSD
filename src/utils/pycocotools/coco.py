@@ -223,7 +223,8 @@ class COCO:
         """
         if type(ids) == list:
             return [self.imgs[id] for id in ids]
-        elif type(ids) == int:
+        # elif type(ids) == int:
+        else:
             return [self.imgs[ids]]
 
     def showAnns(self, anns):

@@ -12,6 +12,8 @@ docker run --name py-ssd --network host --ipc host -v /Users/david/repo/detectio
 on work-station:
 docker run --name py-ssd --network host --ipc host -v /mnt/workspace/david/PytorchSSD:/app -v /mnt/datasets/pascal-voc/VOCdevkit:/mnt/dataset/VOCdevkit -it --rm floydhub/pytorch:0.3.1-py3.30 bash
 
+docker run --name py-ssd --network host --ipc host -v /mnt/workspace/david/PytorchSSD:/app -v /mnt/datasets/station_car:/mnt/dataset/car -it --rm floydhub/pytorch:0.3.1-py3.30 bash
+
 set nms:
 ```
 cd src/utils
@@ -460,4 +462,10 @@ CUDA_VISIBLE_DEVICES=4 python train.py --dataset COCO --gpu_ids 0 --cuda --works
 ```
 
 
-CUDA_VISIBLE_DEVICES=4,5 python train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4-new --config_id v4
+
+### 2018.7.10
+
+train for car:
+```
+CUDA_VISIBLE_DEVICES=4,5 python train.py --dataset COCO --workspace ckpt/car-v1 --config_id c1
+```

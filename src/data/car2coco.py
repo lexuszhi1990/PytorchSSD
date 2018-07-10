@@ -105,7 +105,7 @@ class CocoDatasetGenerator(object):
             image_raw = cv2.imread(ab_image_path.as_posix())
             image['height'], image['width'], _ = image_raw.shape
             image['file_name'] = image_name
-            image['id'] = secrets.randbits(64)
+            image['id'] = image_name.split('.')[0]
             image['category'] = CAT_LIST[0]
             self.images.append(image)
 
@@ -121,7 +121,7 @@ class CocoDatasetGenerator(object):
         return coco_set
 
     def save(self):
-        output_anno_path = Path(self.source_dir, 'annotations', self.image_set + '.json')
+        output_anno_path = Path(self.source_dir, 'annotations', "instances_%s.json" % self.image_set)
         json.dump(self.data2coco(), output_anno_path.open(mode='w+'), indent=4)
         print("save results to %s" % output_anno_path)
 
