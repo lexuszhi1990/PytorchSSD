@@ -185,7 +185,7 @@ config.list = {
         'use_refine': True,
     },
     "v2" : {
-
+        'model_name' : 'RefineSSDMobileNet',
         'train_sets' : 'person_train2017',
         'val_sets' : 'person_val2017',
         'num_classes' : 2,
@@ -216,7 +216,7 @@ config.list = {
         'nms_thresh': 0.45,
     },
     "v3" : {
-
+        'model_name' : 'RefineSSDMobileNet',
         'train_sets' : 'person_train2017',
         'val_sets' : 'person_val2017',
         'num_classes' : 2,
@@ -247,7 +247,7 @@ config.list = {
         'nms_thresh': 0.45,
     },
     "v4" : {
-
+        'model_name' : 'RefineSSDMobileNet',
         'train_sets' : 'person_train2017',
         'val_sets' : 'person_val2017',
         'num_classes' : 2,
@@ -261,13 +261,13 @@ config.list = {
         'variance': [0.1, 0.2],
         'clip': True,
 
-        'width_mult': 0.75,
+        'width_mult': 1,
         'base_channel_num': 128,
         'use_refine': True,
-        'batch_size': 360,
+        'batch_size': 128,
         'num_workers': 8,
         'shape': 320,
-        'base_lr': 4e-2,
+        'base_lr': 5e-2,
         'momentum': 0.9,
         'weight_decay': 5e-4,
         'gamma': 0.1,
@@ -278,7 +278,7 @@ config.list = {
         'nms_thresh': 0.45,
     },
     "v5" : {
-
+        'model_name' : 'RefineSSDMobileNet',
         'train_sets' : 'person_train2017',
         'val_sets' : 'person_val2017',
         'num_classes' : 2,
@@ -314,7 +314,7 @@ config.list = {
         'nms_thresh': 0.45,
     },
     "v6" : {
-
+        'model_name' : 'RefineSSDMobileNet',
         'train_sets' : 'train2017',
         'val_sets' : 'val2017',
         'num_classes' : 81,

@@ -342,6 +342,8 @@ CUDA_VISIBLE_DEVICES=7 python refinedet_mobile_eval.py --workspace ./workspace/t
 
 CUDA_VISIBLE_DEVICES=4,5 python train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/RefineDet_Renset/v1 --config_id r1 --resume 70
 
+CUDA_VISIBLE_DEVICES=4,5 python train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/RefineDet_Renset/v1 --config_id r1 --resume 70
+
 
 ### 2018.7.5
 
@@ -349,19 +351,18 @@ config v3:
 ```
 CUDA_VISIBLE_DEVICES=0 python val.py --dataset COCO --gpu_ids 0 --cuda --workspace ./workspace/train-v3 --config_id v3 --ckpt_path ckpt/train-v3-Final-refineDet-199.pth
 
-Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.163
-Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.357
-Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.128
-Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.040
-Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.192
-Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.337
-Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.102
-Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.230
-Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.275
-Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.092
-Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.335
-Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.483
-rote COCO eval results to: workspace/train-v3/detection_results.pkl
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.268
+INFO:root: Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.521
+INFO:root: Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.245
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.069
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.312
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.529
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.136
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.317
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.366
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.135
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.433
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.639
 ```
 
 config v4:
@@ -369,18 +370,18 @@ config v4:
 ```
 CUDA_VISIBLE_DEVICES=0 python val.py --dataset COCO --gpu_ids 0 --cuda --workspace ./workspace/train-v4 --config_id v4 --ckpt_path ckpt/train-v4-Final-refineDet-199.pth
 
-Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.140
-Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.316
-Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.107
-Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.020
-Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.158
-Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.323
-Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.094
-Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.203
-Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.226
-Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.053
-Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.258
-Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.457
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.249
+INFO:root: Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.479
+INFO:root: Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.232
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.037
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.281
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.543
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.134
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.297
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.324
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.095
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.364
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.628
 ```
 
 config v5:
@@ -388,38 +389,39 @@ config v5:
 ```
 CUDA_VISIBLE_DEVICES=0 python val.py --dataset COCO --gpu_ids 0 --cuda --workspace ./workspace/train-v5 --config_id v5 --ckpt_path ckpt/train-v5-Final-refineDet-200.pth
 
-Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.133
-Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.264
-Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.121
-Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.006
-Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.137
-Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.354
-Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.099
-Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.170
-Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.170
-Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.000
-Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.160
-Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.451
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.223
+INFO:root: Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.380
+INFO:root: Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.230
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.007
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.237
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.558
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.132
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.248
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.249
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.001
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.259
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.624
 ```
 
 config v6:
 
 ```
-CUDA_VISIBLE_DEVICES=0 python val.py --dataset COCO --gpu_ids 0 --cuda --workspace ./workspace/train-v6 --config_id v6 --ckpt_path ./ckpt/train-v6-refinedet_model-190.pth
+CUDA_VISIBLE_DEVICES=5 python val.py --dataset COCO --gpu_ids 0 --cuda --workspace ./workspace/train-v6 --config_id v6 --ckpt_path ./ckpt/train-v6-refinedet_model-190.pth
 
 CUDA_VISIBLE_DEVICES=1 python refinedet_mobile_val.py --dataset COCO --gpu_ids 0 --cuda --ckpt_path ./ckpt/train-v6-refinedet_model-190.pth  --config_id v6
-INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.076
-INFO:root: Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.143
-INFO:root: Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.071
-INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.014
-INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.086
-INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.128
-INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.112
-INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.143
-INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.145
-INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.024
-INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.153
-INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.253
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.209
+INFO:root: Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.368
+INFO:root: Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.211
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.045
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.217
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.375
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.205
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.299
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.309
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.071
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.333
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.531
+
 ```
 
 train with repulsion loss:
@@ -436,10 +438,26 @@ CUDA_VISIBLE_DEVICES=0 python demo.py --workspace ./workspace/train-r1 --ckpt_pa
 
 test r1:
 ```
-CUDA_VISIBLE_DEVICES=6 python val.py --dataset COCO --gpu_ids 0 --cuda --workspace ./workspace/val-r1 --config_id r1 --ckpt_path ./ckpt/train-r1-Final-refineDet-200.pth
+CUDA_VISIBLE_DEVICES=6 python val.py --dataset COCO --gpu_ids 0 --cuda --workspace ./workspace/val-r1 --config_id r1 --ckpt_path ./ckpt/train-r1-Final-refineDet-100.pth
+
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.341
+INFO:root: Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.586
+INFO:root: Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.344
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.091
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.406
+INFO:root: Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.638
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.162
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.374
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.391
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.128
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.461
+INFO:root: Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.711
 ```
 
 train repulsion loss:
 ```
 CUDA_VISIBLE_DEVICES=4 python train.py --dataset COCO --gpu_ids 0 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v3-repulsion --config_id v3
 ```
+
+
+CUDA_VISIBLE_DEVICES=4,5 python train.py --dataset COCO --gpu_ids 0 1 --cuda --workspace /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4-new --config_id v4

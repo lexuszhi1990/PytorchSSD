@@ -27,7 +27,7 @@ def val(net, detector, priors, num_classes, val_dataset, transform, workspace, c
 
     workspace_path = Path(workspace)
     if ckpt_path is not None and Path(ckpt_path).exists:
-        net = load_weights(net, ckpt_path)
+        load_weights(net, ckpt_path)
 
     # dump predictions and ground truth
     num_images = len(val_dataset)
@@ -120,6 +120,8 @@ if __name__ == '__main__':
 
     module_lib = globals()[module_cfg['model_name']]
     net = module_lib(module_cfg['num_classes'], base_channel_num=module_cfg['base_channel_num'], width_mult=module_cfg['width_mult'], use_refine=module_cfg['use_refine'])
+    net.eval()
+
     if dataset == "VOC":
         val_dataset = VOCDetection(root_path, module_cfg['val_sets'], None, AnnotationTransform())
     elif dataset == "COCO":

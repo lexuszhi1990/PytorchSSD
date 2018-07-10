@@ -31,7 +31,7 @@ from src.symbol.RefineSSD_mobilenet_v2 import RefineSSDMobileNet
 from src.symbol.RefineSSD_ResNeXt import RefineSSDSEResNeXt
 from val import val
 
-def train(workspace, num_classes, train_dataset, val_dataset, val_trainsform, priors, detector, base_channel_num, width_mult, use_refine,batch_size, num_workers, shape, base_lr, momentum, weight_decay, gamma, max_epoch=200, resume_epoch=0, inteval=10, enable_cuda=False, gpu_ids=[], enable_visdom=False, prefix='refinedet_model'):
+def train(workspace, model_name, num_classes, train_dataset, val_dataset, val_trainsform, priors, detector, base_channel_num, width_mult, use_refine,batch_size, num_workers, shape, base_lr, momentum, weight_decay, gamma, max_epoch=200, resume_epoch=0, inteval=10, enable_cuda=False, gpu_ids=[], enable_visdom=False, prefix='refinedet_model'):
 
     if enable_visdom:
         viz = visdom.Visdom()
@@ -41,8 +41,8 @@ def train(workspace, num_classes, train_dataset, val_dataset, val_trainsform, pr
     if not val_results_path.exists():
         val_results_path.mkdir(parents=True)
 
-    # net = RefineSSDMobileNet(num_classes, base_channel_num=base_channel_num, width_mult=width_mult, use_refine=use_refine)
-    net = RefineSSDSEResNeXt(num_classes=num_classes, base_channel_num=base_channel_num, use_refine=use_refine)
+    module_lib = globals()[model_name]
+    net = module_lib(num_classes=num_classes, base_channel_num=base_channel_num, width_mult=width_mult, use_refine=use_refine)
 
     ckpt_path = workspace_path.joinpath("%s-%d.pth" %(prefix, resume_epoch))
     net.initialize_weights(ckpt_path)
@@ -84,16 +84,18 @@ def train(workspace, num_classes, train_dataset, val_dataset, val_trainsform, pr
 
             if use_refine:
                 if epoch < 50:
-                    loss = 0.5 * (arm_loss_l + arm_loss_c + arm_rep_loss) + 0.5 * (odm_loss_l + odm_loss_c + odm_rep_loss)
+                    # loss = 0.5 * (arm_loss_l + arm_loss_c + arm_rep_loss) + 0.5 * (odm_loss_l + odm_loss_c + odm_rep_loss)
+                    loss = 0.5 * (arm_loss_l + arm_loss_c) + 0.5 * (odm_loss_l + odm_loss_c)
                 else:
-                    loss = 0.2 * (arm_loss_l + arm_loss_c + arm_rep_loss) + 0.8 * (odm_loss_l + odm_loss_c + odm_rep_loss)
+                    # loss = 0.2 * (arm_loss_l + arm_loss_c + arm_rep_loss) + 0.8 * (odm_loss_l + odm_loss_c + odm_rep_loss)
+                    loss = 0.2 * (arm_loss_l + arm_loss_c) + 0.8 * (odm_loss_l + odm_loss_c)
             else:
                 loss = odm_loss_l + odm_loss_c
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             if iteration % inteval == 0:
-                logging.info("[%d/%d] || total_loss: %.4f(arm_loc_loss: %.4f, arm_cls_loss: %.4f, , arm_rep_loss: %.4f, obm_loc_loss: %.4f, obm_cls_loss: %.4f, odm_rep_loss: %.4f) || Batch time: %.4f sec. || LR: %.6f" % (epoch, iteration, loss, arm_loss_l.data[0], arm_loss_c.data[0], arm_rep_loss.data[0], odm_loss_l.data[0], odm_loss_c.data[0], odm_rep_loss.data[0], timer.average_time, optimizer.param_groups[0]['lr']))
+                logging.info("[%d/%d] || total_loss: %.4f(arm_loc_loss: %.4f, arm_cls_loss: %.4f, , arm_rep_loss: %.4f, obm_loc_loss: %.4f, obm_cls_loss: %.4f, odm_rep_loss: %.4f) || Batch time: %.4f sec. || LR: %.6f" % (epoch, iteration, loss, arm_loss_l.data[0], arm_loss_c.data[0], 0, odm_loss_l.data[0], odm_loss_c.data[0], 0, timer.average_time, optimizer.param_groups[0]['lr']))
                 timer.clear()
 
         if epoch % inteval == 0:
@@ -157,4 +159,4 @@ if __name__ == '__main__':
         train_dataset = COCODet(root_path, module_cfg['train_sets'], preproc(img_dim, rgb_means, rgb_std, augment_ratio))
         val_dataset = COCODet(root_path, module_cfg['val_sets'], None)
 
-    train(workspace, module_cfg['num_classes'], train_dataset, val_dataset, val_trainsform, priors, detector, module_cfg['base_channel_num'], module_cfg['width_mult'], module_cfg['use_refine'], module_cfg['batch_size'], module_cfg['num_workers'], module_cfg['shape'], module_cfg['base_lr'], module_cfg['momentum'], module_cfg['weight_decay'], module_cfg['gamma'], module_cfg['max_epoch'], resume_epoch, inteval, enable_cuda, gpu_ids, enable_visdom, prefix)
+    train(workspace, module_cfg['model_name'], module_cfg['num_classes'], train_dataset, val_dataset, val_trainsform, priors, detector, module_cfg['base_channel_num'], module_cfg['width_mult'], module_cfg['use_refine'], module_cfg['batch_size'], module_cfg['num_workers'], module_cfg['shape'], module_cfg['base_lr'], module_cfg['momentum'], module_cfg['weight_decay'], module_cfg['gamma'], module_cfg['max_epoch'], resume_epoch, inteval, enable_cuda, gpu_ids, enable_visdom, prefix)

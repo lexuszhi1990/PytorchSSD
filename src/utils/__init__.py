@@ -22,8 +22,6 @@ def load_weights(net, ckpt_path):
     logging.info(net)
     logging.info("load weights from %s" % ckpt_path)
 
-    return net
-
 def xavier(param):
     init.xavier_uniform(param)
 
