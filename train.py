@@ -20,7 +20,7 @@ from src.data.coco import COCODet
 from src.data.voc import VOCDetection, AnnotationTransform
 from src.loss import RefineMultiBoxLoss, MultiBoxLoss, RepulsionLoss
 from src.detector import Detector
-from src.prior_box import PriorBox
+from src.prior_box import PriorBox, PriorBoxV1
 from src.utils import setup_logger, kaiming_weights_init
 from src.utils.args import get_args
 from src.utils.timer import Timer
@@ -138,25 +138,17 @@ if __name__ == '__main__':
     log_file_path = Path(workspace).joinpath("train-%s" % (dataset))
     setup_logger(log_file_path.as_posix())
 
-    if dataset == "COCO":
-        basic_conf = config.coco
-    elif dataset == "VOC":
-        basic_conf = config.voc
-    else:
-        raise RuntimeError("not support dataset %s" % (dataset))
-    root_path, img_dim, rgb_means, rgb_std, augment_ratio = basic_conf.root_path, basic_conf.img_dim, basic_conf.rgb_means, basic_conf.rgb_std, basic_conf.augment_ratio
-
-    module_cfg = config.list[args.config_id]
-    val_trainsform = BaseTransform(module_cfg['shape'], rgb_means, rgb_std, (2, 0, 1))
-    priorbox = PriorBox(module_cfg)
+    conf = config.list[args.config_id]
+    val_trainsform = BaseTransform(conf['shape'], conf['rgb_means'], conf['rgb_std'], (2, 0, 1))
+    priorbox = PriorBox(conf)
     priors = Variable(priorbox.forward(), volatile=True)
-    detector = Detector(module_cfg['num_classes'], top_k=module_cfg['top_k'], conf_thresh=module_cfg['confidence_thresh'], nms_thresh=module_cfg['nms_thresh'], variance=module_cfg['variance'])
+    detector = Detector(conf['num_classes'], top_k=conf['top_k'], conf_thresh=conf['confidence_thresh'], nms_thresh=conf['nms_thresh'], variance=conf['variance'])
 
     if dataset == "VOC":
-        train_dataset = VOCDetection(root_path, module_cfg['train_sets'], preproc(img_dim, rgb_means, rgb_std, augment_ratio), AnnotationTransform())
-        val_dataset = VOCDetection(root_path, module_cfg['val_sets'], None, AnnotationTransform())
+        train_dataset = VOCDetection(conf['root_path'], conf['train_sets'], preproc(conf['shape'], conf['rgb_means'], conf['rgb_std'], conf['augment_ratio']), AnnotationTransform())
+        val_dataset = VOCDetection(conf['root_path'], conf['val_sets'], None, AnnotationTransform())
     elif dataset == "COCO":
-        train_dataset = COCODet(root_path, module_cfg['train_sets'], preproc(img_dim, rgb_means, rgb_std, augment_ratio))
-        val_dataset = COCODet(root_path, module_cfg['val_sets'], None)
+        train_dataset = COCODet(conf['root_path'], conf['train_sets'], preproc(conf['shape'], conf['rgb_means'], conf['rgb_std'], conf['augment_ratio']))
+        val_dataset = COCODet(conf['root_path'], conf['val_sets'], None)
 
-    train(workspace, module_cfg['model_name'], module_cfg['num_classes'], train_dataset, val_dataset, val_trainsform, priors, detector, module_cfg['base_channel_num'], module_cfg['width_mult'], module_cfg['use_refine'], module_cfg['batch_size'], module_cfg['num_workers'], module_cfg['shape'], module_cfg['base_lr'], module_cfg['momentum'], module_cfg['weight_decay'], module_cfg['gamma'], module_cfg['max_epoch'], resume_epoch, inteval, enable_cuda, gpu_ids, enable_visdom, prefix)
+    train(workspace, conf['model_name'], conf['num_classes'], train_dataset, val_dataset, val_trainsform, priors, detector, conf['base_channel_num'], conf['width_mult'], conf['use_refine'], conf['batch_size'], conf['num_workers'], conf['shape'], conf['base_lr'], conf['momentum'], conf['weight_decay'], conf['gamma'], conf['max_epoch'], resume_epoch, inteval, enable_cuda, gpu_ids, enable_visdom, prefix)

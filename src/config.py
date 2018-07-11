@@ -387,11 +387,15 @@ config.list = {
 
     # resnet config
     "c1" : {
-        'model_name' : 'RefineSSDSEResNeXt',
-        'train_sets' : 'train_a',
-        'val_sets' : 'train_b',
-        'num_classes' : 2,
+        'root_path': '/mnt/dataset/car',
+        'train_sets': 'train_a',
+        'val_sets': 'train_b',
+        'num_classes': 2,
+        'augment_ratio': 0.2,
+        'rgb_std': (1,1,1),
+        'rgb_means': (104,117,123),
 
+        'model_name': 'RefineSSDSEResNeXt',
         'feature_maps': [40, 20, 10, 5],
         'min_dim': 320,
         'steps': [8, 16, 32, 64],
@@ -415,8 +419,6 @@ config.list = {
 
         'top_k': 200,
         'confidence_thresh': 0.15,
-        # 'top_k': 200,
-        # 'confidence_thresh': 0.01,
         'nms_thresh': 0.45,
     },
 
