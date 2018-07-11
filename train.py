@@ -28,6 +28,7 @@ from src.utils.nms_wrapper import nms
 
 from src.symbol.RefineSSD_vgg import RefineSSDVGG
 from src.symbol.RefineSSD_mobilenet_v2 import RefineSSDMobileNet
+from src.symbol.RefineSSD_mobilenet_v2_1 import RefineSSDMobileNetV1
 from src.symbol.RefineSSD_ResNeXt import RefineSSDSEResNeXt
 from val import val
 
