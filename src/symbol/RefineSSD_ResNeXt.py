@@ -213,7 +213,8 @@ class RefineSSDSEResNeXt(nn.Module):
 
     def initialize_weights(self, ckpt_path=None):
         if ckpt_path and Path(ckpt_path).exists():
-            state_dict = torch.load(ckpt_path)
+            state_dict = torch.load(ckpt_path, lambda storage, loc: storage)
+
             new_state_dict = OrderedDict()
             for k, v in state_dict.items():
                 head = k[:7]

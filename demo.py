@@ -21,6 +21,7 @@ from src.utils.timer import Timer
 
 from src.symbol.RefineSSD_vgg import RefineSSDVGG
 from src.symbol.RefineSSD_mobilenet_v2 import RefineSSDMobileNet
+from src.symbol.RefineSSD_mobilenet_v2_1 import RefineSSDMobileNetV1
 from src.symbol.RefineSSD_ResNeXt import RefineSSDSEResNeXt
 
 
@@ -45,15 +46,15 @@ if __name__ == '__main__':
     setup_logger(workspace)
     _t = {'im_detect': Timer(), 'misc': Timer()}
 
-    module_cfg = config.list[config_id]
-    basic_conf = config.coco
-    val_trainsform = BaseTransform(module_cfg['shape'], basic_conf.rgb_means, basic_conf.rgb_std, (2, 0, 1))
-    priorbox = PriorBox(module_cfg)
+    conf = config.list[config_id]
+    val_trainsform = BaseTransform(conf['shape'], conf['rgb_means'], conf['rgb_std'], (2, 0, 1))
+    priorbox = PriorBox(conf)
     priors = Variable(priorbox.forward(), volatile=True)
-    detector = Detector(module_cfg['num_classes'], top_k=module_cfg['top_k'], conf_thresh=module_cfg['confidence_thresh'], nms_thresh=module_cfg['nms_thresh'], variance=module_cfg['variance'])
+    detector = Detector(conf['num_classes'], top_k=conf['top_k'], conf_thresh=conf['confidence_thresh'], nms_thresh=conf['nms_thresh'], variance=conf['variance'])
 
-    # net = RefineSSDSEResNeXt(module_cfg['num_classes'], base_channel_num=module_cfg['base_channel_num'], width_mult=module_cfg['width_mult'], use_refine=module_cfg['use_refine'])
-    net = RefineSSDSEResNeXt(module_cfg['num_classes'], base_channel_num=module_cfg['base_channel_num'], use_refine=module_cfg['use_refine'])
+    module_lib = globals()[conf['model_name']]
+    net = module_lib(num_classes=conf['num_classes'], base_channel_num=conf['base_channel_num'], width_mult=conf['width_mult'], use_refine=conf['use_refine'])
+
     net.initialize_weights(ckpt_path)
     if enable_cuda and len(gpu_ids) > 0:
         net = torch.nn.DataParallel(net, device_ids=gpu_ids)
@@ -79,7 +80,7 @@ if __name__ == '__main__':
 
     output_np = output.cpu().numpy()
 
-    for class_id in range(1, module_cfg['num_classes']):
+    for class_id in range(1, conf['num_classes']):
         cls_outut = output_np[class_id]
         dets = cls_outut[cls_outut[:, 1] > 0.40]
         dets[:, 2:6] = np.floor(dets[:, 2:6] * basic_scale)
