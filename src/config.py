@@ -367,6 +367,9 @@ config.list = {
         'train_sets' : 'person_train2017',
         'val_sets' : 'person_val2017',
         'num_classes' : 2,
+        'augment_ratio': 0.2,
+        'rgb_std': (1,1,1),
+        'rgb_means': (104,117,123),
 
         'feature_maps': [40, 20, 10, 5],
         'min_dim': 320,

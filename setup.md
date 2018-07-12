@@ -436,6 +436,8 @@ CUDA_VISIBLE_DEVICES=0 python train.py --dataset COCO --gpu_ids 0 --cuda --works
 
 CUDA_VISIBLE_DEVICES=0 python demo.py --workspace ./workspace/train-r1 --ckpt_path ckpt/train-r1-Final-refineDet-100.pth --eval_img ./samples/ebike-three.jpg --config_id r1
 
+CUDA_VISIBLE_DEVICES=6 python demo.py --workspace ./workspace/train-v4 --ckpt_path /mnt/ckpt/pytorchSSD/Refine_mobilenet/train-v4-new-2/Final-refineDet-100.pth --eval_img ./samples/ebike-three.jpg --config_id v4
+
 ### 2018.7.9
 
 test r1:
