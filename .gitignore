@@ -9,3 +9,4 @@ weights
 ckpt
 workspace
 samples/demo
+samples/car*
