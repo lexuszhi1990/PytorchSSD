@@ -58,8 +58,9 @@ if __name__ == '__main__':
     net.initialize_weights(ckpt_path)
     if enable_cuda and len(gpu_ids) > 0:
         net = torch.nn.DataParallel(net, device_ids=gpu_ids)
-        net.cuda()
+        logging.info("initlaize model at gpu" + str(gpu_ids))
 
+    net.eval()
     assert Path(image_path).exists(), "%s not exists" % image_path
     img = cv2.imread(image_path)
     x = Variable(val_trainsform(img).unsqueeze(0), volatile=True)
@@ -67,7 +68,8 @@ if __name__ == '__main__':
         x = x.cuda()
     basic_scale = [img.shape[1], img.shape[0], img.shape[1], img.shape[0]]
 
-    out = net(x=x, inference=True)  # init network
+    # init module
+    out = net(x=x, inference=True)
 
     _t['im_detect'].tic()
     out = net(x=x, inference=True)  # forward pass
@@ -82,7 +84,7 @@ if __name__ == '__main__':
 
     for class_id in range(1, conf['num_classes']):
         cls_outut = output_np[class_id]
-        dets = cls_outut[cls_outut[:, 1] > 0.40]
+        dets = cls_outut[cls_outut[:, 1] > 0.60]
         dets[:, 2:6] = np.floor(dets[:, 2:6] * basic_scale)
         for det in dets:
             cls_id, score, left, top, right, bottom = det

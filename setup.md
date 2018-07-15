@@ -12,7 +12,7 @@ docker run --name py-ssd --network host --ipc host -v /Users/david/repo/detectio
 on work-station:
 docker run --name py-ssd --network host --ipc host -v /mnt/workspace/david/PytorchSSD:/app -v /mnt/datasets/pascal-voc/VOCdevkit:/mnt/dataset/VOCdevkit -it --rm floydhub/pytorch:0.3.1-py3.30 bash
 
-docker run --name py-ssd --network host --ipc host -v /mnt/workspace/david/PytorchSSD:/app -v /mnt/datasets/station_car:/mnt/dataset/car -it --rm floydhub/pytorch:0.3.1-py3.30 bash
+docker run --name py-ssd --network host --ipc host -v /mnt/workspace/david/PytorchSSD:/app -v /mnt/datasets/station_car:/mnt/dataset/car -it --rm floydhub/pytorch:0.3.0-gpu.cuda9cudnn7-py3.22 bash
 
 set nms:
 ```
@@ -469,5 +469,10 @@ CUDA_VISIBLE_DEVICES=4 python train.py --dataset COCO --gpu_ids 0 --cuda --works
 
 train for car:
 ```
-CUDA_VISIBLE_DEVICES=4,5 python train.py --dataset COCO --workspace ckpt/car-v1 --config_id c1
+pip3 install -i https://mirrors.aliyun.com/pypi/simple/ visdom graphviz easydict
+
+CUDA_VISIBLE_DEVICES=0,1 python train.py --workspace ckpt/car-v1 --config_id c1 --cuda --gpu_ids 0 1
 ```
+
+CUDA_VISIBLE_DEVICES=0 python demo.py --workspace ./workspace/car-val-v1 --ckpt_path ckpt/car-v1/Final-refineDet-200.pth --config_id r1 --gpu_ids 0 --cuda --eval_img samples/car_test/e8365e4f-a742-4952-b522-29e6bfcde62a.jpg
+

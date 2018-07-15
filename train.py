@@ -58,6 +58,7 @@ def train(workspace, model_name, num_classes, train_dataset, val_dataset, val_tr
     odm_repulsion_criterion = RepulsionLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.001, enable_cuda=enable_cuda)
     logging.info('Loading datasets...')
     train_dataset_loader = data.DataLoader(train_dataset, batch_size, shuffle=True, num_workers=num_workers, collate_fn=detection_collate)
+    logging.info('Loading datasets is done...')
 
     # optimizer = optim.RMSprop(net.parameters(), lr=base_lr, alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
     optimizer = optim.SGD(net.parameters(), lr=base_lr, momentum=momentum, weight_decay=weight_decay)
