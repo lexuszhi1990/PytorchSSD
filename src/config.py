@@ -406,6 +406,7 @@ config.list = {
         'root_path': '/mnt/dataset/car',
         'train_sets': 'train_a',
         'val_sets': 'train_b',
+        'test_sets': 'test_a',
         'num_classes': 2,
         'augment_ratio': 0.2,
         'rgb_std': (1,1,1),

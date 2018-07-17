@@ -33,7 +33,9 @@ def get_args():
     parser.add_argument('--confidence_thresh', default=0.01, type=float, help='confidence threshold for filtering the roi')
 
     # eval
+    parser.add_argument('--image_set', type=str, default='val', help='image set')
     parser.add_argument('--eval_img', type=str, default='None', help='validate image')
+    parser.add_argument('--save_results', action="store_true", default=False, help='Use cuda to train model')
 
 
     # desperate
