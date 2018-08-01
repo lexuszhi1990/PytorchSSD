@@ -473,6 +473,10 @@ pip3 install -i https://mirrors.aliyun.com/pypi/simple/ visdom graphviz easydict
 
 CUDA_VISIBLE_DEVICES=0,1 python train.py --workspace ckpt/car-v1 --config_id c1 --cuda --gpu_ids 0 1
 
+CUDA_VISIBLE_DEVICES=1 python train.py --workspace ckpt/car-v5 --config_id c1 --cuda --gpu_ids 0
+
+CUDA_VISIBLE_DEVICES=1 python train.py --workspace ckpt/car-v5 --config_id c1 --cuda --gpu_ids 0
+
 CUDA_VISIBLE_DEVICES=1 python val.py --workspace ckpt/car-v1 --config_id c1 --cuda --gpu_ids 0 --ckpt_path ckpt/car-v1/refinedet_model-200.pth
 ```
 

@@ -419,7 +419,7 @@ config.list = {
         'steps': [8, 16, 32, 64],
         'min_sizes': [32, 64, 128, 256],
         'max_sizes': [],
-        'aspect_ratios': [[3], [3], [3], [3]],
+        'aspect_ratios': [[2], [2], [2], [2]],
         'variance': [0.1, 0.2],
         'clip': True,
 
