@@ -29,7 +29,7 @@ class MultiBoxLoss(nn.Module):
     """
 
 
-    def __init__(self, num_classes, overlap_thresh, neg_pos_ratio, object_score=0.01, variance=[0.1,0.2], bg_class_id=0, enable_cuda=False):
+    def __init__(self, num_classes, overlap_thresh, neg_pos_ratio, object_score=0.01, variance=[0.1,0.2], enable_cuda=False, bg_class_id=0, arm_barch=False):
         super(MultiBoxLoss, self).__init__()
 
         self.num_classes = num_classes
@@ -39,6 +39,7 @@ class MultiBoxLoss(nn.Module):
         self.variance = variance
         self.enable_cuda = enable_cuda
         self.bg_class_id = bg_class_id
+        self.arm_barch = arm_barch
 
     def forward(self, pred_data, priors, gt_data):
         """Multibox Loss
@@ -63,6 +64,8 @@ class MultiBoxLoss(nn.Module):
         for idx in range(num):
             gt_loc = gt_data[idx][:,:-1].data
             gt_cls = gt_data[idx][:,-1].data
+            if self.arm_barch:
+                gt_cls = gt_cls > 0
             target_loc[idx], target_score[idx] = match(self.overlap_thresh, gt_loc, gt_cls, priors.data, self.variance)
 
         if self.enable_cuda:
