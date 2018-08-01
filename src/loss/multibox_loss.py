@@ -29,7 +29,7 @@ class MultiBoxLoss(nn.Module):
     """
 
 
-    def __init__(self, num_classes, overlap_thresh, neg_pos_ratio, object_score, variance=[0.1,0.2], bg_class_id=0, enable_cuda=False):
+    def __init__(self, num_classes, overlap_thresh, neg_pos_ratio, object_score=0.01, variance=[0.1,0.2], bg_class_id=0, enable_cuda=False):
         super(MultiBoxLoss, self).__init__()
 
         self.num_classes = num_classes
@@ -40,7 +40,7 @@ class MultiBoxLoss(nn.Module):
         self.enable_cuda = enable_cuda
         self.bg_class_id = bg_class_id
 
-    def forward(self, pred_data, priors_data, gt_data):
+    def forward(self, pred_data, priors, gt_data):
         """Multibox Loss
         Args:
             pred_data (tuple): A tuple containing loc preds, conf preds,
@@ -55,7 +55,7 @@ class MultiBoxLoss(nn.Module):
 
         pred_loc, pred_score = pred_data
         num = pred_loc.size(0)
-        num_priors = (priors_data.size(0))
+        num_priors = (priors.size(0))
 
         # match priors (default boxes) and ground truth boxes
         target_loc = torch.Tensor(num, num_priors, 4)
@@ -63,7 +63,7 @@ class MultiBoxLoss(nn.Module):
         for idx in range(num):
             gt_loc = gt_data[idx][:,:-1].data
             gt_cls = gt_data[idx][:,-1].data
-            target_loc[idx], target_score[idx] = match(self.overlap_thresh, gt_loc, gt_cls, priors_data, self.variance)
+            target_loc[idx], target_score[idx] = match(self.overlap_thresh, gt_loc, gt_cls, priors.data, self.variance)
 
         if self.enable_cuda:
             target_loc = target_loc.cuda()

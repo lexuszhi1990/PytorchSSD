@@ -147,9 +147,3 @@ if __name__ == '__main__':
         val_dataset = COCODet(conf['root_path'], conf[image_set], None)
 
     val(net, detector, priors, conf['num_classes'], val_dataset, val_trainsform, workspace, ckpt_path=ckpt_path, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005, save=save_results)
-
-    # resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/v1/refineDet-model-50.pth'
-    # resume_net_path = 'workspace/v2/refineDet-model-280.pth'
-    # resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_vgg_320/refinedet_vgg_0516/Refine_vgg_COCO_epoches_250.pth'
-    # resume_net_path = '/mnt/ckpt/pytorchSSD/Refine_mobilenet/scratch-v2/refineDet-model-50.pth'
-

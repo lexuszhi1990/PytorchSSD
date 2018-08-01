@@ -52,10 +52,13 @@ def train(workspace, model_name, num_classes, train_dataset, val_dataset, val_tr
         net = torch.nn.DataParallel(net, device_ids=gpu_ids)
 
     timer = Timer()
-    arm_criterion = RefineMultiBoxLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, enable_cuda=enable_cuda)
-    arm_repulsion_criterion = RepulsionLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.001, enable_cuda=enable_cuda)
-    odm_criterion = RefineMultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.001, enable_cuda=enable_cuda)
-    odm_repulsion_criterion = RepulsionLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.001, enable_cuda=enable_cuda)
+    if use_refine:
+        arm_criterion = MultiBoxLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, enable_cuda=enable_cuda)
+        odm_criterion = RefineMultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.001, enable_cuda=enable_cuda)
+        arm_repulsion_criterion = RepulsionLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.001, enable_cuda=enable_cuda)
+    else:
+        odm_criterion = MultiBoxLoss(num_classes, overlap_thresh=0.5, neg_pos_ratio=3, enable_cuda=enable_cuda)
+        odm_repulsion_criterion = RepulsionLoss(num_classes,    overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.001, enable_cuda=enable_cuda)
     logging.info('Loading datasets...')
     train_dataset_loader = data.DataLoader(train_dataset, batch_size, shuffle=True, num_workers=num_workers, collate_fn=detection_collate)
     logging.info('Loading datasets is done...')
@@ -63,6 +66,7 @@ def train(workspace, model_name, num_classes, train_dataset, val_dataset, val_tr
     # optimizer = optim.RMSprop(net.parameters(), lr=base_lr, alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
     optimizer = optim.SGD(net.parameters(), lr=base_lr, momentum=momentum, weight_decay=weight_decay)
     scheduler = MultiStepLR(optimizer, milestones=[ i*6 for i in range(1, max_epoch//6) ], gamma=0.75)
+    arm_loss_l, arm_loss_c, odm_loss_l, odm_loss_c = 0., 0., 0., 0.
     for epoch in range(resume_epoch, max_epoch):
         net.train()
         scheduler.step()
@@ -81,8 +85,10 @@ def train(workspace, model_name, num_classes, train_dataset, val_dataset, val_tr
             if use_refine:
                 arm_loss_l, arm_loss_c = arm_criterion((arm_loc, arm_conf), priors, targets)
                 arm_rep_loss = arm_repulsion_criterion((arm_loc, arm_conf), priors, targets)
-            odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets, (arm_loc, arm_conf))
-            odm_rep_loss = odm_repulsion_criterion((odm_loc, odm_conf), priors, targets, (arm_loc, arm_conf))
+                odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets, (arm_loc, arm_conf))
+                odm_rep_loss = odm_repulsion_criterion((odm_loc, odm_conf), priors, targets, (arm_loc, arm_conf))
+            else:
+                odm_loss_l, odm_loss_c = odm_criterion((odm_loc, odm_conf), priors, targets)
 
             if use_refine:
                 if epoch < 50:
@@ -97,7 +103,8 @@ def train(workspace, model_name, num_classes, train_dataset, val_dataset, val_tr
             loss.backward()
             optimizer.step()
             if iteration % inteval == 0:
-                logging.info("[%d/%d] || total_loss: %.4f(arm_loc_loss: %.4f, arm_cls_loss: %.4f, , arm_rep_loss: %.4f, obm_loc_loss: %.4f, obm_cls_loss: %.4f, odm_rep_loss: %.4f) || Batch time: %.4f sec. || LR: %.6f" % (epoch, iteration, loss, arm_loss_l.data[0], arm_loss_c.data[0], 0, odm_loss_l.data[0], odm_loss_c.data[0], 0, timer.average_time, optimizer.param_groups[0]['lr']))
+                # logging.info("[%d/%d] || total_loss: %.4f(arm_loc_loss: %.4f, arm_cls_loss: %.4f, , arm_rep_loss: %.4f, odm_loss_l: %.4f, odm_loss_c: %.4f, odm_rep_loss: %.4f) || Batch time: %.4f sec. || LR: %.6f" % (epoch, iteration, loss, arm_loss_l.data[0], arm_loss_c.data[0], 0, odm_loss_l.data[0], odm_loss_c.data[0], 0, timer.average_time, optimizer.param_groups[0]['lr']))
+                logging.info("[%d/%d] || total_loss: %.4f(arm_loc_loss: %.4f, arm_cls_loss: %.4f, , arm_rep_loss: %.4f, odm_loss_l: %.4f, odm_loss_c: %.4f, odm_rep_loss: %.4f) || Batch time: %.4f sec. || LR: %.6f" % (epoch, iteration, loss, 0, 0, 0, odm_loss_l.data[0], odm_loss_c.data[0], 0, timer.average_time, optimizer.param_groups[0]['lr']))
                 timer.clear()
 
         if epoch % inteval == 0:

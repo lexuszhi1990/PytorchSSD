@@ -1,10 +1,4 @@
-"""VOC Dataset Classes
-
-Original author: Francisco Massa
-https://github.com/fmassa/vision/blob/voc_dataset/torchvision/datasets/voc.py
-
-Updated by: Ellis Brown, Max deGroot
-"""
+# -*- coding: utf-8 -*-
 
 import json
 import pickle
@@ -262,14 +256,7 @@ class COCODet(data.Dataset):
             logging.info('Collecting {} results ({:d}/{:d})'.format(cls, cls_ind, self.num_classes))
             coco_cat_id = self._class_to_coco_cat_id[cls]
             results.extend(self._coco_results_one_category(all_boxes[cls_ind], coco_cat_id))
-            '''
-            if cls_ind ==30:
-                res_f = res_file+ '_1.json'
-                logging.info('Writing results json to {}'.format(res_f))
-                with open(res_f, 'w') as fid:
-                    json.dump(results, fid)
-                results = []
-            '''
+
         logging.info('Writing results json to {}'.format(res_file))
         with open(res_file, 'w') as fid:
             json.dump(results, fid)

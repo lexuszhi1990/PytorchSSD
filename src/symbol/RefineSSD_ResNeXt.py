@@ -237,6 +237,7 @@ class RefineSSDSEResNeXt(nn.Module):
     def forward(self, x, inference=False):
         latent_feat, final_feat = self.feature_net(x)
 
+        arm_loc_result, arm_conf_result = None, None
         arm_loc_list = list()
         arm_conf_list = list()
         obm_loc_list = list()

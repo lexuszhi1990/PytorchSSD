@@ -40,8 +40,8 @@ class RefineMultiBoxLoss(nn.Module):
         self.object_score = object_score
         self.variance = variance
         self.enable_cuda = enable_cuda
-        self.filter_arm_object = filter_arm_object
         self.bg_class_id = bg_class_id
+        self.filter_arm_object = filter_arm_object
 
     def forward(self, pred_data, priors, gt_data, arm_data=(None, None)):
         """Multibox Loss
@@ -67,13 +67,7 @@ class RefineMultiBoxLoss(nn.Module):
         for idx in range(num):
             gt_loc = gt_data[idx][:,:-1].data
             gt_cls = gt_data[idx][:,-1].data
-            # for arm branch
-            if arm_loc is None:
-                assert self.num_classes == 2, "num_classes in arm branch should be 2, not %d" % (self.num_classes)
-                gt_cls = gt_cls > self.bg_class_id
-                target_loc[idx], target_score[idx] = match(self.overlap_thresh, gt_loc, gt_cls, priors.data, self.variance)
-            else:
-                target_loc[idx], target_score[idx] = refine_match(self.overlap_thresh, gt_loc, gt_cls, priors.data, arm_loc[idx].data, self.variance)
+            target_loc[idx], target_score[idx] = refine_match(self.overlap_thresh, gt_loc, gt_cls, priors.data, arm_loc[idx].data, self.variance)
 
         if self.enable_cuda:
             target_loc = target_loc.cuda()

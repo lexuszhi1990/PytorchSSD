@@ -482,3 +482,8 @@ CUDA_VISIBLE_DEVICES=1 python val.py --workspace ckpt/car-v1 --config_id c1 --cu
 
 CUDA_VISIBLE_DEVICES=0 python demo.py --workspace ./workspace/car-val-v1 --ckpt_path ckpt/car-v1/Final-refineDet-200.pth --config_id r1 --gpu_ids 0 --cuda --eval_img samples/car_test/e8365e4f-a742-4952-b522-29e6bfcde62a.jpg
 
+### training on coco dataset（80 classes）
+
+CUDA_VISIBLE_DEVICES=1 python train.py --cuda --gpu_ids 0 --workspace ckpt/coco-v1 --config_id coco-v1
+
+CUDA_VISIBLE_DEVICES=0 python train.py --cuda --gpu_ids 0 --workspace ckpt/coco-v2 --config_id coco-v2
