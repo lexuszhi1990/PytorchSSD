@@ -20,10 +20,9 @@ from src.data.voc import VOCDetection, AnnotationTransform
 from src.loss import RefineMultiBoxLoss, MultiBoxLoss, RepulsionLoss
 from src.detector import Detector
 from src.prior_box import PriorBox, PriorBoxV1
-from src.utils import setup_logger, kaiming_weights_init
+from src.utils import setup_logger
 from src.utils.args import get_args
 from src.utils.timer import Timer
-from src.utils.nms_wrapper import nms
 
 from src.symbol.RefineSSD_vgg import RefineSSDVGG
 from src.symbol.RefineSSD_mobilenet_v2 import RefineSSDMobileNet
@@ -133,7 +132,7 @@ if __name__ == '__main__':
         priors = priorbox.forward()
     priors = priors.to(device)
 
-    detector = Detector(cfg.num_classes, top_k=cfg.top_k, conf_thresh=cfg.confidence_thresh, nms_thresh=cfg.nms_thresh, variance=cfg.variance)
+    detector = Detector(cfg.num_classes, top_k=cfg.top_k, conf_thresh=cfg.confidence_thresh, nms_thresh=cfg.nms_thresh, variance=cfg.variance, device=device)
 
     if cfg.dataset.lower() == "voc":
         train_dataset = VOCDetection(cfg.root_path, cfg.train_sets, preproc(cfg.shape, cfg.rgb_means, cfg.rgb_std, cfg.augment_ratio), AnnotationTransform())

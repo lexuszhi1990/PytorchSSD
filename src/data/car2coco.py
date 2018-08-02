@@ -138,3 +138,28 @@ if __name__ == "__main__":
     generator.generate_categories()
     generator.generate_label()
     generator.save()
+
+'''
+if keep:
+    import csv
+    import time
+    result_path = '%s-%s.csv' % ("results", "%s"%(time.strftime("%Y-%m-%d-%H-%M")))
+    with open(result_path, 'w', newline='') as csvfile:
+        fieldnames = ['name', 'coordinate']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        for i in range(num_images):
+            img_path = dataset.ids[i]
+            img_name = Path(img_path).name
+            bbox_str = ''
+            for bbox in all_boxes[1][i]:
+                try:
+                    bbox[:, 2:4] = bbox[:, 2:4] - bbox[:, :2]
+                except Exception as e:
+                    bbox[2:4] = bbox[2:4] - bbox[:2]
+                bbox = [max(0, int(b)) for b in bbox]
+                bbox_str += "%d_%d_%d_%d;" % (int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3]))
+            writer.writerow({'name': img_name, 'coordinate': bbox_str[:-1]})
+    logging.info("save results at %s" % (result_path))
+
+'''

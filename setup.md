@@ -77,6 +77,7 @@ http://noahsnail.com/2018/01/15/2018-01-15-PyTorch%20socket.error%20[Errno%20111
 
 CUDA_VISIBLE_DEVICES=0 python train.py --cuda --gpu_ids 0 --config coco_v1
 
+CUDA_VISIBLE_DEVICES=1 python val.py --cuda --gpu_ids 0 --ckpt_path workspace/coco-v1/coco-resnet-v1-0.pth --config coco_v1
 
 ### training on voc dataset
 

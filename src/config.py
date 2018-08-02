@@ -82,6 +82,7 @@ config.coco_v1 = edict({
     'enable_visdom': False,
     'prefix': 'coco-resnet-v1',
     'inteval': 10,
+    'max_per_image': 5,
 })
 
 
