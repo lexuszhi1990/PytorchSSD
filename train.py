@@ -32,7 +32,8 @@ from src.symbol.RefineSSD_mobilenet_v2_1 import RefineSSDMobileNetV1
 from src.symbol.RefineSSD_ResNeXt import RefineSSDSEResNeXt
 from val import val
 
-def train(workspace, model_name, num_classes, train_dataset, val_dataset, val_trainsform, priors, detector, base_channel_num, width_mult, use_refine,batch_size, num_workers, shape, base_lr, momentum, weight_decay, gamma, max_epoch=200, resume_epoch=0, inteval=10, enable_cuda=False, gpu_ids=[], enable_visdom=False, prefix='refinedet_model'):
+# def train(workspace, model_name, num_classes, train_dataset, val_dataset, val_trainsform, priors, detector, base_channel_num, width_mult, use_refine,batch_size, num_workers, shape, base_lr, momentum, weight_decay, gamma, max_epoch=200, resume_epoch=0, inteval=10, enable_cuda=False, gpu_ids=[], enable_visdom=False, prefix='refinedet_model'):
+def train(workspace, conf, train_dataset, val_dataset, priors, detector, resume_epoch=0, inteval=10, enable_cuda=False, gpu_ids=[], enable_visdom=False, prefix='refinedet_model'):
 
     if enable_visdom:
         viz = visdom.Visdom()
@@ -42,8 +43,8 @@ def train(workspace, model_name, num_classes, train_dataset, val_dataset, val_tr
     if not val_results_path.exists():
         val_results_path.mkdir(parents=True)
 
-    module_lib = globals()[model_name]
-    net = module_lib(num_classes=num_classes, base_channel_num=base_channel_num, width_mult=width_mult, use_refine=use_refine)
+    module_lib = globals()[cfg.model_name]
+    net = module_lib(num_classes=cfg.num_classes, base_channel_num=cfg.base_channel_num, width_mult=cfg.width_mult, use_refine=cfg.use_refine)
 
     ckpt_path = workspace_path.joinpath("%s-%d.pth" %(prefix, resume_epoch))
     net.initialize_weights(ckpt_path)
@@ -64,7 +65,7 @@ def train(workspace, model_name, num_classes, train_dataset, val_dataset, val_tr
     logging.info('Loading datasets is done...')
 
     # optimizer = optim.RMSprop(net.parameters(), lr=base_lr, alpha = 0.9, eps=1e-08, momentum=momentum, weight_decay=weight_decay)
-    optimizer = optim.SGD(net.parameters(), lr=base_lr, momentum=momentum, weight_decay=weight_decay)
+    optimizer = optim.SGD(net.parameters(), lr=cfg.base_lr, momentum=cfg.momentum, weight_decay=cfg.weight_decay)
     scheduler = MultiStepLR(optimizer, milestones=[ i*6 for i in range(1, max_epoch//6) ], gamma=0.75)
     arm_loss_l, arm_loss_c, odm_loss_l, odm_loss_c = 0., 0., 0., 0.
     for epoch in range(resume_epoch, max_epoch):
@@ -121,43 +122,44 @@ def train(workspace, model_name, num_classes, train_dataset, val_dataset, val_tr
 
 if __name__ == '__main__':
 
-    # v2 = Variable(torch.randn(1, 3, 320, 320), requires_grad=True)
-    # model = RefineSSDMobileNet(shape=320, num_classes=2, base_channel_num=128, width_mult=0.5, use_refine=True)
-    # model.initialize_weights()
-    # y = model(v2)
-    # import pdb
-    # pdb.set_trace()
-
     args = get_args()
-    workspace = args.workspace
-    dataset = args.dataset.upper()
-    prefix = args.prefix
-    resume_epoch = args.resume_epoch
-    inteval = args.inteval
-    enable_visdom = args.visdom
+    cfg = config[args.config]
+    resume_epoch = args.resume
     gpu_ids = [int(i) for i in args.gpu_ids]
-    enable_cuda = args.cuda and torch.cuda.is_available() and len(gpu_ids) > 0
-    if enable_cuda:
-        torch.set_default_tensor_type('torch.cuda.FloatTensor')
-        cudnn.benchmark = True
+    enable_cuda = torch.cuda.is_available() and len(gpu_ids) > 0
+    device = torch.device("cuda" if use_cuda else "cpu")
 
-    workspace_path = Path(workspace)
-    if not workspace_path.exists():
-        workspace_path.mkdir(parents=True)
-    log_file_path = Path(workspace).joinpath("train-%s" % (dataset))
+    workspace = Path(cfg.workspace)
+    if not workspace.exists():
+        workspace.mkdir(parents=True)
+    log_file_path = workspace.joinpath("train-%s" % (dataset))
     setup_logger(log_file_path.as_posix())
 
-    conf = config.list[args.config_id]
-    val_trainsform = BaseTransform(conf['shape'], conf['rgb_means'], conf['rgb_std'], (2, 0, 1))
-    priorbox = PriorBox(conf)
+    val_trainsform = BaseTransform(cfg.shape, cfg.rgb_means, cfg.rgb_std, (2, 0, 1))
+    priorbox = PriorBox(cfg)
     priors = Variable(priorbox.forward(), volatile=True)
-    detector = Detector(conf['num_classes'], top_k=conf['top_k'], conf_thresh=conf['confidence_thresh'], nms_thresh=conf['nms_thresh'], variance=conf['variance'])
+    detector = Detector(cfg.num_classes, top_k=cfg.top_k, conf_thresh=cfg.confidence_thresh, nms_thresh=cfg.nms_thresh, variance=cfg.variance)
+
+    import pdb
+    pdb.set_trace()
+
+
+
 
     if dataset == "VOC":
-        train_dataset = VOCDetection(conf['root_path'], conf['train_sets'], preproc(conf['shape'], conf['rgb_means'], conf['rgb_std'], conf['augment_ratio']), AnnotationTransform())
-        val_dataset = VOCDetection(conf['root_path'], conf['val_sets'], None, AnnotationTransform())
+        train_dataset = VOCDetection(cfg.root_path, cfg.train_sets, preproc(cfg.shape, cfg.rgb_means, cfg.rgb_std, cfg.augment_ratio), AnnotationTransform())
+        val_dataset = VOCDetection(cfg.root_path, cfg.val_sets, None, AnnotationTransform())
     elif dataset == "COCO":
-        train_dataset = COCODet(conf['root_path'], conf['train_sets'], preproc(conf['shape'], conf['rgb_means'], conf['rgb_std'], conf['augment_ratio']))
-        val_dataset = COCODet(conf['root_path'], conf['val_sets'], None)
+        train_dataset = COCODet(cfg.root_path, cfg.train_sets, preproc(cfg.shape, cfg.rgb_means, cfg.rgb_std, cfg.augment_ratio))
+        val_dataset = COCODet(cfg.root_path, cfg.val_sets, None)
 
-    train(workspace, conf['model_name'], conf['num_classes'], train_dataset, val_dataset, val_trainsform, priors, detector, conf['base_channel_num'], conf['width_mult'], conf['use_refine'], conf['batch_size'], conf['num_workers'], conf['shape'], conf['base_lr'], conf['momentum'], conf['weight_decay'], conf['gamma'], conf['max_epoch'], resume_epoch, inteval, enable_cuda, gpu_ids, enable_visdom, prefix)
+    # train(workspace, cfg.model_name, cfg.num_classes, train_dataset, val_dataset, val_trainsform, priors, detector, cfg.base_channel_num, cfg.width_mult, cfg.use_refine, cfg.batch_size, cfg.num_workers, cfg.shape, cfg.base_lr, cfg.momentum, cfg.weight_decay, cfg.gamma, cfg.max_epoch, resume_epoch, inteval, enable_cuda, gpu_ids, enable_visdom, prefix)
+    train(workspace, conf, train_dataset, val_dataset, priors, detector, resume_epoch, inteval, enable_cuda, gpu_ids, enable_visdom, prefix)
+
+
+    # workspace = args.workspace
+    # dataset = args.dataset.upper()
+    # prefix = args.prefix
+    # inteval = args.inteval
+    # enable_visdom = args.visdom
+
