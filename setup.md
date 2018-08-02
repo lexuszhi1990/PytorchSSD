@@ -14,6 +14,8 @@ docker run --name py-ssd --network host --ipc host -v /mnt/workspace/david/Pytor
 
 docker run --name py-ssd --network host --ipc host -v /mnt/workspace/david/PytorchSSD:/app -v /mnt/datasets/station_car:/mnt/dataset/car -it --rm floydhub/pytorch:0.3.0-gpu.cuda9cudnn7-py3.22 bash
 
+docker run --name py-ssd --network host --ipc host -v /mnt/workspace/david/PytorchSSD:/app -v /mnt/datasets/coco/cocoapi:/mnt/dataset/car -it --rm floydhub/pytorch:0.3.0-gpu.cuda9cudnn7-py3.22 bash
+
 set nms:
 ```
 cd src/utils

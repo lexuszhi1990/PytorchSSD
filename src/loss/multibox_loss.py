@@ -9,7 +9,7 @@ class MultiBoxLoss(nn.Module):
     """SSD Weighted Loss Function
     Compute Targets:
         1) Produce Confidence Target Indices by matching ground truth boxes
-           with (default) 'priorboxes' that have jaccard index > threshold parameter
+           with (default) 'prior boxes' that have jaccard index > threshold parameter
            (default threshold: 0.5).
         2) Produce localization target by 'encoding' variance into offsets of ground
            truth boxes and their matched 'priorboxes'.
