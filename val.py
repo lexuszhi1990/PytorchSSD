@@ -31,19 +31,18 @@ def val(net, detector, priors, dataset, transform, device, cfg=None):
     for i in range(num_images):
         img = dataset.pull_image(i)
         basic_scale = [img.shape[1], img.shape[0], img.shape[1], img.shape[0]]
-
         inputs = transform(img).unsqueeze(0)
-        inputs = torch.Tensor(inputs).to(device)
+        with torch.no_grad():
+            inputs = torch.Tensor(inputs).to(device)
+            _t['im_detect'].tic()
+            out = net(x=inputs, inference=True)  # forward pass
+            detect_time = _t['im_detect'].toc()
 
-        _t['im_detect'].tic()
-        out = net(x=inputs, inference=True)  # forward pass
-        detect_time = _t['im_detect'].toc()
-
-        _t['misc'].tic()
-        arm_loc, arm_conf, odm_loc, odm_conf = out
-        output = detector.forward((odm_loc, odm_conf), priors, (arm_loc, arm_conf))
-        output_np = output.cpu().numpy()
-        nms_time = _t['misc'].toc()
+            _t['misc'].tic()
+            arm_loc, arm_conf, odm_loc, odm_conf = out
+            output = detector.forward((odm_loc, odm_conf), priors, (arm_loc, arm_conf))
+            output_np = output.cpu().numpy()
+            nms_time = _t['misc'].toc()
 
         for j in range(1, cfg.num_classes):
             results = output_np[j]
@@ -57,6 +56,7 @@ def val(net, detector, priors, dataset, transform, device, cfg=None):
             boxes = results[:, 2:6] * basic_scale
             c_dets = np.hstack((boxes, scores[:, np.newaxis])).astype(np.float32, copy=False)
             all_boxes[j][i] = c_dets
+
         if cfg.max_per_image > 0:
             image_scores = np.hstack([all_boxes[j][i][:, -1] for j in range(1, cfg.num_classes)])
             if len(image_scores) > cfg.max_per_image:
