@@ -29,7 +29,7 @@ from src.symbol.RefineSSD_ResNeXt import RefineSSDSEResNeXt
 from val import val
 
 
-def train(train_dataset, val_dataset, priors, detector, resume_epoch, device, cfg):
+def train(train_dataset, val_dataset, val_trainsform, priors, detector, resume_epoch, device, cfg):
 
     timer = Timer()
     if cfg.enable_visdom:
@@ -102,7 +102,9 @@ def train(train_dataset, val_dataset, priors, detector, resume_epoch, device, cf
             save_ckpt_path = workspace.joinpath("%s-%d.pth" %(cfg.prefix, epoch))
             torch.save(net.state_dict(), save_ckpt_path)
             logging.info("save model to %s " % save_ckpt_path)
-            val(net, detector, priors, num_classes, val_dataset, val_trainsform, val_results_path, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005)
+            import pdb
+            pdb.set_trace()
+            val(net, detector, priors, val_dataset, val_trainsform, device, cfg=cfg)
             net.train()
 
     final_model_path = workspace.joinpath("Final-refineDet-%d.pth" %(epoch)).as_posix()
@@ -139,4 +141,4 @@ if __name__ == '__main__':
         train_dataset = COCODet(cfg.root_path, cfg.train_sets, preproc(cfg.shape, cfg.rgb_means, cfg.rgb_std, cfg.augment_ratio))
         val_dataset = COCODet(cfg.root_path, cfg.val_sets, None)
 
-    train(train_dataset, val_dataset, priors, detector, resume_epoch, device, cfg)
+    train(train_dataset, val_dataset, val_trainsform, priors, detector, resume_epoch, device, cfg)
