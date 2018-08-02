@@ -164,7 +164,7 @@ class VOCDetection(data.Dataset):
         self._annopath = os.path.join('%s', 'Annotations', '%s.xml')
         self._imgpath = os.path.join('%s', 'JPEGImages', '%s.jpg')
         self.ids = list()
-        for [year, name] in image_sets:
+        for (year, name) in image_sets:
             self._year = year
             rootpath = os.path.join(self.root, 'VOC' + str(year))
             for line in open(os.path.join(rootpath, 'ImageSets', 'Main', name + '.txt')):
