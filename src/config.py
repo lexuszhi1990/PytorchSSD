@@ -44,6 +44,46 @@ config.voc_v1 = edict({
     'inteval': 10,
 })
 
+config.coco_v1 = edict({
+    'workspace': './workspace/coco-v1',
+    'dataset': 'coco',
+    'root_path': '/mnt/dataset/coco',
+    'train_sets' : 'train2017',
+    'val_sets' : 'val2017',
+    'test_sets': 'null',
+    'num_classes': 81,
+    'augment_ratio': 0.2,
+    'rgb_std': (1,1,1),
+    'rgb_means': (104,117,123),
+    'model_name': 'RefineSSDMobileNet',
+    'feature_maps': [40, 20, 10, 5],
+    'shape': 320,
+    'min_dim': 320,
+    'steps': [8, 16, 32, 64],
+    'min_sizes': [32, 64, 128, 256],
+    'max_sizes': [],
+    'aspect_ratios': [[2], [2], [2], [2]],
+    'variance': [0.1, 0.2],
+    'clip': True,
+    'width_mult': 1.,
+    'base_channel_num': 128,
+    'use_refine': False,
+    'batch_size': 8,
+    'num_workers': 1,
+    'base_lr': 2e-2,
+    'momentum': 0.9,
+    'weight_decay': 5e-4,
+    'gamma': 0.1,
+    'max_epoch': 201,
+    'top_k': 200,
+    'confidence_thresh': 0.15,
+    'nms_thresh': 0.45,
+
+    'enable_visdom': False,
+    'prefix': 'coco-resnet-v1',
+    'inteval': 10,
+})
+
 
 """
 
