@@ -41,11 +41,13 @@ def train(train_dataset, val_dataset, val_trainsform, priors, detector, resume_e
         val_results_path.mkdir(parents=True)
     ckpt_path = workspace.joinpath("%s-%d.pth" %(cfg.prefix, resume_epoch))
 
+    logging.info('Initialize model %s...' % cfg.model_name)
     module_lib = globals()[cfg.model_name]
     net = module_lib(cfg=cfg)
     net.initialize_weights(ckpt_path)
     logging.info(net)
     net.to(device)
+    logging.info('Initialize model %s done!' % cfg.model_name)
 
     if cfg.use_refine:
         arm_criterion = MultiBoxLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, arm_barch=True)
@@ -57,7 +59,7 @@ def train(train_dataset, val_dataset, val_trainsform, priors, detector, resume_e
 
     logging.info('Loading datasets...')
     train_dataset_loader = data.DataLoader(train_dataset, cfg.batch_size, shuffle=True, num_workers=cfg.num_workers, collate_fn=detection_collate)
-    logging.info('Loading datasets is done...')
+    logging.info('Loading datasets is done!')
 
     optimizer = optim.SGD(net.parameters(), lr=cfg.base_lr, momentum=cfg.momentum, weight_decay=cfg.weight_decay)
     scheduler = MultiStepLR(optimizer, milestones=[ i*6 for i in range(1, cfg.max_epoch//6) ], gamma=0.75)
