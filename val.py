@@ -17,7 +17,6 @@ from src.logger import setup_logger
 from src.args import get_args
 from src.timer import Timer
 
-from src.symbol.RefineSSD_vgg import RefineSSDVGG
 from src.symbol.RefineSSD_mobilenet_v2 import RefineSSDMobileNet
 from src.symbol.RefineSSD_ResNeXt import RefineSSDSEResNeXt
 
