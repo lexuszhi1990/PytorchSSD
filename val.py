@@ -112,7 +112,6 @@ if __name__ == '__main__':
     module_lib = globals()[cfg.model_name]
     net = module_lib(cfg=cfg)
     net.initialize_weights(ckpt_path)
-    logging.info("load weights from %s" % (ckpt_path))
     net.to(device)
     net.eval()
 
