@@ -6,7 +6,6 @@ from pathlib import Path
 import logging
 
 import torch
-import torch.backends.cudnn as cudnn
 
 from src.config import config
 from src.data.data_augment import BaseTransform
