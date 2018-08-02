@@ -28,7 +28,7 @@ class MultiBoxLoss(nn.Module):
     """
 
 
-    def __init__(self, num_classes, overlap_thresh, neg_pos_ratio=3, object_score=0.01, variance=[0.1,0.2], bg_class_id=0, use_arm_barch=False, device=None):
+    def __init__(self, num_classes, overlap_thresh, neg_pos_ratio=3, object_score=0.01, variance=[0.1,0.2], bg_class_id=0, use_arm_barch=False, device=torch.device("cpu")):
         super(MultiBoxLoss, self).__init__()
         self.smooth_l1_loss = nn.SmoothL1Loss(size_average=False)
 
@@ -92,8 +92,8 @@ class MultiBoxLoss(nn.Module):
         batch_size, num_boxes, _ = loc_preds.size()
         num_priors = (priors.size(0))
 
-        loc_targets = torch.Tensor(batch_size, num_priors, 4)
-        score_targets = torch.LongTensor(batch_size, num_priors)
+        loc_targets = torch.Tensor(batch_size, num_priors, 4).to(self.device)
+        score_targets = torch.LongTensor(batch_size, num_priors).to(self.device)
         for idx in range(batch_size):
             gt_loc = gt_data[idx][:,:-1]
             gt_cls = gt_data[idx][:,-1]

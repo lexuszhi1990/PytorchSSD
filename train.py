@@ -45,7 +45,7 @@ def train(train_dataset, val_dataset, priors, detector, resume_epoch, device, cf
     ckpt_path = workspace.joinpath("%s-%d.pth" %(cfg.prefix, resume_epoch))
 
     module_lib = globals()[cfg.model_name]
-    net = module_lib(num_classes=cfg.num_classes, base_channel_num=cfg.base_channel_num, width_mult=cfg.width_mult, use_refine=cfg.use_refine)
+    net = module_lib(cfg=cfg)
     net.initialize_weights(ckpt_path)
     logging.info(net)
     net.to(device)
@@ -55,7 +55,7 @@ def train(train_dataset, val_dataset, priors, detector, resume_epoch, device, cf
         odm_criterion = RefineMultiBoxLoss(cfg.num_classes, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.001)
         arm_repulsion_criterion = RepulsionLoss(2, overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.001)
     else:
-        odm_criterion = MultiBoxLoss(cfg.num_classes, overlap_thresh=0.5, neg_pos_ratio=3)
+        odm_criterion = MultiBoxLoss(cfg.num_classes, overlap_thresh=0.5, neg_pos_ratio=3, device=device)
     odm_repulsion_criterion = RepulsionLoss(cfg.num_classes,    overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.001)
 
     logging.info('Loading datasets...')
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     resume_epoch = args.resume
     gpu_ids = [int(i) for i in args.gpu_ids]
     enable_cuda = torch.cuda.is_available() and len(gpu_ids) > 0
-    device = torch.device("cuda" if enable_cuda else "cpu")
+    device = torch.device("cuda:%d" % (gpu_ids[0]) if enable_cuda else "cpu")
 
     workspace = Path(cfg.workspace)
     if not workspace.exists():

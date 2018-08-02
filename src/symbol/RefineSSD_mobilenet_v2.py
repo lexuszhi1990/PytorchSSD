@@ -87,15 +87,15 @@ class InvertedResidual(nn.Module):
 
 
 class RefineSSDMobileNet(nn.Module):
-    def __init__(self, num_classes=81, width_mult=1., base_channel_num=128, use_refine=True):
+    def __init__(self, cfg):
         super(RefineSSDMobileNet, self).__init__()
-        self.num_classes = num_classes
-        self.base_channel_num = base_channel_num
-        self.use_refine = use_refine
+        self.num_classes = cfg.num_classes
+        self.base_channel_num = cfg.base_channel_num
+        self.use_refine = cfg.use_refine
+        self.base_mbox = 2 * len(cfg.aspect_ratios[0]) + 1
 
-        self.base_channel_list = [ int(width_mult*num) for num in [32, 64, 160, 320] ]
-        self.base_mbox = 3
-        self.base = nn.ModuleList(build_mobile_net_v2(width_mult=width_mult))
+        self.base_channel_list = [ int(cfg.width_mult*num) for num in [32, 64, 160, 320] ]
+        self.base = nn.ModuleList(build_mobile_net_v2(width_mult=cfg.width_mult))
         if self.use_refine:
             self.arm_loc = nn.ModuleList([
                     nn.Conv2d(self.base_channel_list[0], 4*self.base_mbox, kernel_size=3, stride=1, padding=1),
@@ -124,33 +124,43 @@ class RefineSSDMobileNet(nn.Module):
 
         self.appended_layer = nn.Sequential(
                 nn.Conv2d(self.base_channel_list[3], self.base_channel_list[3] * 2, kernel_size=1, stride=1, padding=0),
+                nn.BatchNorm2d(self.base_channel_list[3] * 2),
                 nn.ReLU6(inplace=True),
                 nn.Conv2d(self.base_channel_list[3] * 2, self.base_channel_list[3], kernel_size=3, stride=2, padding=1),
-                nn.ReLU6(inplace=True)
+                nn.BatchNorm2d(self.base_channel_list[3]),
+                nn.ReLU6(inplace=True),
             )
         self.trans_layers = nn.ModuleList([
                 nn.Sequential(
                     nn.Conv2d(self.base_channel_list[0], self.base_channel_num, kernel_size=3, stride=1, padding=1),
+                    nn.BatchNorm2d(self.base_channel_num),
                     nn.ReLU6(inplace=True),
                     nn.Conv2d(self.base_channel_num, self.base_channel_num, kernel_size=3, stride=1, padding=1),
+                    nn.BatchNorm2d(self.base_channel_num),
                 ),
 
                 nn.Sequential(
                     nn.Conv2d(self.base_channel_list[1], self.base_channel_num, kernel_size=3, stride=1, padding=1),
+                    nn.BatchNorm2d(self.base_channel_num),
                     nn.ReLU6(inplace=True),
                     nn.Conv2d(self.base_channel_num, self.base_channel_num, kernel_size=3, stride=1, padding=1),
+                    nn.BatchNorm2d(self.base_channel_num),
                 ),
 
                 nn.Sequential(
                     nn.Conv2d(self.base_channel_list[2], self.base_channel_num, kernel_size=3, stride=1, padding=1),
+                    nn.BatchNorm2d(self.base_channel_num),
                     nn.ReLU6(inplace=True),
                     nn.Conv2d(self.base_channel_num, self.base_channel_num, kernel_size=3, stride=1, padding=1),
+                    nn.BatchNorm2d(self.base_channel_num),
                 ),
 
                 nn.Sequential(
                     nn.Conv2d(self.base_channel_list[3], self.base_channel_num, kernel_size=3, stride=1, padding=1),
+                    nn.BatchNorm2d(self.base_channel_num),
                     nn.ReLU6(inplace=True),
                     nn.Conv2d(self.base_channel_num, self.base_channel_num, kernel_size=3, stride=1, padding=1),
+                    nn.BatchNorm2d(self.base_channel_num),
                 )
             ])
         self.up_layers = nn.ModuleList([
@@ -185,15 +195,16 @@ class RefineSSDMobileNet(nn.Module):
     def initialize_weights(self, ckpt_path=None):
         if ckpt_path and Path(ckpt_path).exists():
             state_dict = torch.load(ckpt_path, lambda storage, loc: storage)
-            new_state_dict = OrderedDict()
-            for k, v in state_dict.items():
-                head = k[:7]
-                if head == 'module.':
-                    name = k[7:] # remove `module.`
-                else:
-                    name = k
-                new_state_dict[name] = v
-            self.load_state_dict(new_state_dict)
+            # new_state_dict = OrderedDict()
+            # for k, v in state_dict.items():
+            #     head = k[:7]
+            #     if head == 'module.':
+            #         name = k[7:] # remove `module.`
+            #     else:
+            #         name = k
+            #     new_state_dict[name] = v
+            # self.load_state_dict(new_state_dict)
+            self.load_state_dict(state_dict)
             logging.info("load weights from %s" % ckpt_path)
         else:
             self.initialize_base_weights()
