@@ -156,19 +156,17 @@ class VOCDetection(data.Dataset):
             (default: 'VOC2007')
     """
 
-    def __init__(self, root, image_sets, preproc=None, target_transform=None,
-                 dataset_name='VOC0712'):
+    def __init__(self, root, image_sets, preproc=None, target_transform=None):
         self.root = root
         self.image_set = image_sets
         self.preproc = preproc
         self.target_transform = target_transform
-        self.name = dataset_name
         self._annopath = os.path.join('%s', 'Annotations', '%s.xml')
         self._imgpath = os.path.join('%s', 'JPEGImages', '%s.jpg')
         self.ids = list()
-        for (year, name) in image_sets:
+        for [year, name] in image_sets:
             self._year = year
-            rootpath = os.path.join(self.root, 'VOC' + year)
+            rootpath = os.path.join(self.root, 'VOC' + str(year))
             for line in open(os.path.join(rootpath, 'ImageSets', 'Main', name + '.txt')):
                 self.ids.append((rootpath, line.strip()))
 
