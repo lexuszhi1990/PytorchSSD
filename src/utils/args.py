@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-from src.utils import str2bool
 
 def get_args():
     parser = argparse.ArgumentParser(description='Refined SSD')
@@ -13,9 +12,9 @@ def get_args():
     parser.add_argument('--resume', default=-1, type=int, help='resume iter for retraining')
 
     # eval
-    parser.add_argument('--image_set', type=str, default='val', help='image set')
+    parser.add_argument('--ckpt_path', type=str, help='pretrained base model')
+    parser.add_argument('--keep_results', action="store_true", default=False, help='Use cuda to train model')
     parser.add_argument('--eval_img', type=str, default='None', help='validate image')
-    parser.add_argument('--save_results', action="store_true", default=False, help='Use cuda to train model')
 
 
     # parser.add_argument('--workspace', default='./workspace')

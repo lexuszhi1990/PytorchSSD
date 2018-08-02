@@ -13,7 +13,7 @@ from src.data.coco import COCODet
 from src.data.voc import VOCDetection, AnnotationTransform
 from src.detector import Detector
 from src.prior_box import PriorBox
-from src.utils import setup_logger, load_weights
+from src.utils import setup_logger
 from src.utils.args import get_args
 from src.utils.timer import Timer
 
@@ -21,29 +21,23 @@ from src.symbol.RefineSSD_vgg import RefineSSDVGG
 from src.symbol.RefineSSD_mobilenet_v2 import RefineSSDMobileNet
 from src.symbol.RefineSSD_ResNeXt import RefineSSDSEResNeXt
 
-def val(net, detector, priors, num_classes, dataset, transform, workspace, ckpt_path=None, enable_cuda=False, max_per_image=300, thresh=0.005, save=False):
-
-    workspace_path = Path(workspace)
-    if ckpt_path is not None and Path(ckpt_path).exists:
-        load_weights(net, ckpt_path)
-
-    # dump predictions and ground truth
-    num_images = len(dataset)
-    all_boxes = [[[] for _ in range(num_images)]
-                 for _ in range(num_classes)]
+def val(net, detector, priors, dataset, transform, device, cfg=None):
 
     _t = {'im_detect': Timer(), 'misc': Timer()}
-    det_file = workspace_path.joinpath('detections.pkl')
+    workspace = Path(cfg.workspace)
+    num_images = len(dataset)
+    all_boxes = [[[] for _ in range(num_images)] for _ in range(cfg.num_classes)]
+    det_file = workspace.joinpath('detections.pkl')
 
     for i in range(num_images):
         img = dataset.pull_image(i)
-        x = Variable(transform(img).unsqueeze(0), volatile=True)
-        if enable_cuda:
-            x = x.cuda()
         basic_scale = [img.shape[1], img.shape[0], img.shape[1], img.shape[0]]
 
+        inputs = transform(img).unsqueeze(0)
+        inputs = torch.Tensor(inputs).to(device)
+
         _t['im_detect'].tic()
-        out = net(x=x, inference=True)  # forward pass
+        out = net(x=inputs, inference=True)  # forward pass
         detect_time = _t['im_detect'].toc()
 
         _t['misc'].tic()
@@ -52,7 +46,7 @@ def val(net, detector, priors, num_classes, dataset, transform, workspace, ckpt_
         output_np = output.cpu().numpy()
         nms_time = _t['misc'].toc()
 
-        for j in range(1, num_classes):
+        for j in range(1, cfg.num_classes):
             results = output_np[j]
             mask = results[:, 1] >= 0.05
             results = results[mask]
@@ -64,11 +58,11 @@ def val(net, detector, priors, num_classes, dataset, transform, workspace, ckpt_
             boxes = results[:, 2:6] * basic_scale
             c_dets = np.hstack((boxes, scores[:, np.newaxis])).astype(np.float32, copy=False)
             all_boxes[j][i] = c_dets
-        if max_per_image > 0:
-            image_scores = np.hstack([all_boxes[j][i][:, -1] for j in range(1,num_classes)])
-            if len(image_scores) > max_per_image:
-                image_thresh = np.sort(image_scores)[-max_per_image]
-                for j in range(1, num_classes):
+        if cfg.max_per_image > 0:
+            image_scores = np.hstack([all_boxes[j][i][:, -1] for j in range(1, cfg.num_classes)])
+            if len(image_scores) > cfg.max_per_image:
+                image_thresh = np.sort(image_scores)[-cfg.max_per_image]
+                for j in range(1, cfg.num_classes):
                     keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
                     all_boxes[j][i] = all_boxes[j][i][keep, :]
 
@@ -79,69 +73,48 @@ def val(net, detector, priors, num_classes, dataset, transform, workspace, ckpt_
 
     with open(det_file, 'wb') as f:
         pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
-    logging.info("dump results to %s" % (det_file))
+        logging.info("dump results to %s" % (det_file))
 
     if dataset.image_set.find("test") == -1:
         logging.info('Evaluating detections')
         dataset.evaluate_detections(all_boxes, workspace)
 
-    if save:
-        import csv
-        import time
-        result_path = '%s-%s.csv' % ("results", "%s"%(time.strftime("%Y-%m-%d-%H-%M")))
-        with open(result_path, 'w', newline='') as csvfile:
-            fieldnames = ['name', 'coordinate']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-            for i in range(num_images):
-                img_path = dataset.ids[i]
-                img_name = Path(img_path).name
-                bbox_str = ''
-                for bbox in all_boxes[1][i]:
-                    try:
-                        bbox[:, 2:4] = bbox[:, 2:4] - bbox[:, :2]
-                    except Exception as e:
-                        bbox[2:4] = bbox[2:4] - bbox[:2]
-                    bbox = [max(0, int(b)) for b in bbox]
-                    bbox_str += "%d_%d_%d_%d;" % (int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3]))
-                writer.writerow({'name': img_name, 'coordinate': bbox_str[:-1]})
-        logging.info("save results at %s" % (result_path))
-
 
 if __name__ == '__main__':
 
-    args = get_args()
-    workspace = args.workspace
-    dataset = args.dataset.upper()
-    ckpt_path = args.ckpt_path
-    save_results = args.save_results
 
-    workspace_path = Path(workspace)
-    if not workspace_path.exists():
-        workspace_path.mkdir(parents=True)
-    log_file_path = Path(workspace).joinpath("validate-%s" % (dataset))
+    args = get_args()
+    cfg = config[args.config]
+    ckpt_path = args.ckpt_path
+    resume_epoch = args.resume
+    gpu_ids = [int(i) for i in args.gpu_ids]
+    enable_cuda = torch.cuda.is_available() and len(gpu_ids) > 0
+    device = torch.device("cuda:%d" % (gpu_ids[0]) if enable_cuda else "cpu")
+
+    workspace = Path(cfg.workspace)
+    if not workspace.exists():
+        workspace.mkdir(parents=True)
+    log_file_path = workspace.joinpath("val")
     setup_logger(log_file_path.as_posix())
 
-    gpu_ids = [int(i) for i in args.gpu_ids]
-    enable_cuda = args.cuda and torch.cuda.is_available() and len(gpu_ids) > 0
-    if enable_cuda:
-        torch.set_default_tensor_type('torch.cuda.FloatTensor')
-        cudnn.benchmark = True
+    transform = BaseTransform(cfg.shape, cfg.rgb_means, cfg.rgb_std, (2, 0, 1))
+    priorbox = PriorBox(cfg)
+    with torch.no_grad():
+        priors = priorbox.forward()
+    priors = priors.to(device)
 
-    conf = config.list[args.config_id]
-    val_trainsform = BaseTransform(conf['shape'], conf['rgb_means'], conf['rgb_std'], (2, 0, 1))
-    priorbox = PriorBox(conf)
-    priors = Variable(priorbox.forward(), volatile=True)
-    detector = Detector(conf['num_classes'], top_k=conf['top_k'], conf_thresh=conf['confidence_thresh'], nms_thresh=conf['nms_thresh'], variance=conf['variance'])
+    detector = Detector(cfg.num_classes, top_k=cfg.top_k, conf_thresh=cfg.confidence_thresh, nms_thresh=cfg.nms_thresh, variance=cfg.variance, device=device)
 
-    module_lib = globals()[conf['model_name']]
-    net = module_lib(conf['num_classes'], base_channel_num=conf['base_channel_num'], width_mult=conf['width_mult'], use_refine=conf['use_refine'])
+    if cfg.dataset.lower() == "voc":
+        dataset = VOCDetection(cfg.root_path, cfg.val_sets, None, AnnotationTransform())
+    elif cfg.dataset.lower() == "coco":
+        dataset = COCODet(cfg.root_path, cfg.val_sets, None)
+
+    module_lib = globals()[cfg.model_name]
+    net = module_lib(cfg=cfg)
+    net.initialize_weights(ckpt_path)
+    logging.info("load weights from %s" % (ckpt_path))
+    net.to(device)
     net.eval()
 
-    image_set = 'val_sets' if args.image_set == 'val' else 'test_sets'
-    if dataset == "VOC":
-        val_dataset = VOCDetection(conf['root_path'], conf[image_set], None, AnnotationTransform())
-    elif dataset == "COCO":
-        val_dataset = COCODet(conf['root_path'], conf[image_set], None)
-
-    val(net, detector, priors, conf['num_classes'], val_dataset, val_trainsform, workspace, ckpt_path=ckpt_path, enable_cuda=enable_cuda, max_per_image=300, thresh=0.005, save=save_results)
+    val(net, detector, priors, dataset, transform, device, cfg=cfg)

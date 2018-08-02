@@ -21,6 +21,7 @@ class Detector(Function):
         self.max_per_image = max_per_image
         # TODO: apply nms for output
         self.nms_intersection_class = nms_intersection_class
+        self.device = device
 
     def forward(self, pred_data, prior, arm_data=(None, None)):
         """
@@ -41,8 +42,7 @@ class Detector(Function):
         loc_data = loc.data
         conf_data = conf.data
         prior_data = prior.data
-        num = loc_data.size(0)  # batch size
-        scale = torch.Tensor([320, 320, 320, 320])
+        num = loc_data.size(0)
         assert num == 1, "num is %d" % num
         index = 0
         num_priors = prior_data.size(0)
@@ -74,11 +74,10 @@ class Detector(Function):
                 continue
             decoded_cls_mask = cls_mask.unsqueeze(1).expand_as(decoded_boxes)
             boxes = decoded_boxes[decoded_cls_mask].view(-1, 4)
-            # boxes = boxes * scale
-            # boxes[boxes < 0] = 0
-            # idx of highest scoring and non-overlapping boxes per class
+            if boxes.size(0) == 0:
+                continue
             ids, count = pytorch_nms(boxes, scores, self.nms_thresh, self.top_k)
-            cls_list = torch.Tensor([1 for _ in range(self.top_k)]).unsqueeze(1)
+            cls_list = torch.Tensor([1 for _ in range(self.top_k)]).unsqueeze(1).to(self.device)
             output[cls_id, :count] = torch.cat((cls_list[:count], scores[ids[:count]].unsqueeze(1), boxes[ids[:count]]), 1)
 
         # output = output.contiguous().view(-1, 6)
