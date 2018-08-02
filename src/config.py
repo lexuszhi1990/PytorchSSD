@@ -6,15 +6,16 @@ config = edict()
 
 config.voc_v1 = edict({
     'workspace': './workspace/v1',
+    'dataset': 'voc',
     'root_path': '/mnt/dataset/VOCdevkit',
-    'train_sets': 'train',
-    'val_sets': 'val',
+    'train_sets': [(2012, 'train')],
+    'val_sets': [(2012, 'val')],
     'test_sets': 'null',
     'num_classes': 21,
     'augment_ratio': 0.2,
     'rgb_std': (1,1,1),
     'rgb_means': (104,117,123),
-    'model_name': 'RefineSSDSEResNeXt',
+    'model_name': 'RefineSSDMobileNet',
     'feature_maps': [40, 20, 10, 5],
     'shape': 320,
     'min_dim': 320,
@@ -26,7 +27,7 @@ config.voc_v1 = edict({
     'clip': True,
     'width_mult': 1.,
     'base_channel_num': 256,
-    'use_refine': True,
+    'use_refine': False,
     'batch_size': 4,
     'num_workers': 1,
     'base_lr': 2e-2,
@@ -37,6 +38,10 @@ config.voc_v1 = edict({
     'top_k': 200,
     'confidence_thresh': 0.15,
     'nms_thresh': 0.45,
+
+    'enable_visdom': False,
+    'prefix': 'coco-resnet-v1',
+    'inteval': 10,
 })
 
 
