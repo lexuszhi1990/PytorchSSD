@@ -378,7 +378,7 @@ config.list = {
         'batch_size': 32,
         'num_workers': 1,
         'shape': 320,
-        'base_lr': 1e-2,
+        'base_lr': 4e-2,
         'momentum': 0.9,
         'weight_decay': 5e-4,
         'gamma': 0.1,
