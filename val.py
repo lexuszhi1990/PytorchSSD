@@ -7,7 +7,6 @@ import logging
 
 import torch
 import torch.backends.cudnn as cudnn
-from torch.autograd import Variable
 
 from src.config import config
 from src.data.data_augment import BaseTransform

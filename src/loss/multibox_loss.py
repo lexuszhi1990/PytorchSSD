@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
 
-from src.utils.box_utils import match, log_sum_exp
+from src.utils.box_utils import match
 
 class MultiBoxLoss(nn.Module):
     """SSD Weighted Loss Function
@@ -42,6 +41,18 @@ class MultiBoxLoss(nn.Module):
         self.use_arm_barch = use_arm_barch
         self.device = device
 
+    def cross_entropy_loss(self, x, y):
+        """
+        x: tensor (batch_size*8732, num_classes) batch_size*8732个default box num_classes个类别
+        y: tensor (batch_size*8732,) 每条数据的标签，值在0~D-1之间
+        return: (batch_size*8732,)
+        对所有的default box进行交叉熵的计算
+        """
+        xmax = x.detach().max() # 标量
+        log_sum_exp = torch.log(torch.sum(torch.exp(x-xmax), 1)) + xmax # (batch_size*default_box,)
+        # 这个x.gather(1, y.view(-1,1))是(1,batch_size*default_box) 直接和log_sum_exp相减会进行广播到(batch_size*default_box, batch_size*default_box)
+        # 所以需要进行squeeze()
+        return log_sum_exp - x.gather(1, y.view(-1,1)).squeeze()
 
     def hard_negative_mining(self, conf_loss, pos):
         """
@@ -101,8 +112,7 @@ class MultiBoxLoss(nn.Module):
         pos_loc_targets = loc_targets[pos_mask].view(-1, 4)
         loc_loss = self.smooth_l1_loss(pos_loc_preds, pos_loc_targets)
 
-        batch_score = score_preds.view(-1, self.num_classes)
-        conf_loss = log_sum_exp(batch_score) - batch_score.gather(1, score_targets.view(-1, 1))
+        conf_loss = self.cross_entropy_loss(score_preds.view(-1, self.num_classes), score_targets.view(-1))
         # mining 出来的negtive box: (batch_size, 8732), 大于零的位置表示是mining出来的
         neg = self.hard_negative_mining(conf_loss, pos)
         neg_mask = neg.unsqueeze(2).expand_as(score_preds)

@@ -1,7 +1,8 @@
 import torch
 from torch.autograd import Function
 
-from .utils.box_utils import decode, center_size, pytorch_nms
+from src.utils.box_utils import decode, center_size
+from src.nms import pytorch_nms
 
 class Detector(Function):
     """At test time, Detect is the final layer of SSD.  Decode location preds,

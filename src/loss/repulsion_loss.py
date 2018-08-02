@@ -5,7 +5,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
 # from src.utils.box_utils import IoG, decode_new
 
 from src.utils.box_utils import rep_match, IoG

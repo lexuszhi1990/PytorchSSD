@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
 from src.utils.box_utils import match, refine_match, log_sum_exp, decode
 
 class RefineMultiBoxLoss(nn.Module):

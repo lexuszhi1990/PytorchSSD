@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-from torch.autograd import Variable
 from collections import OrderedDict
 
 from data import COCOroot, VOC_300, VOC_512, COCO_300, COCO_320, COCO_512, COCO_mobile_300, AnnotationTransform, \
