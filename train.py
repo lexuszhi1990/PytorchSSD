@@ -104,8 +104,6 @@ def train(train_dataset, val_dataset, val_trainsform, priors, detector, resume_e
             save_ckpt_path = workspace.joinpath("%s-%d.pth" %(cfg.prefix, epoch))
             torch.save(net.state_dict(), save_ckpt_path)
             logging.info("save model to %s " % save_ckpt_path)
-            import pdb
-            pdb.set_trace()
             val(net, detector, priors, val_dataset, val_trainsform, device, cfg=cfg)
             net.train()
 
