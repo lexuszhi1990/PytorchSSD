@@ -29,19 +29,42 @@ class MultiBoxLoss(nn.Module):
     """
 
 
-    def __init__(self, num_classes, overlap_thresh, neg_pos_ratio, object_score=0.01, variance=[0.1,0.2], enable_cuda=False, bg_class_id=0, arm_barch=False):
+    def __init__(self, num_classes, overlap_thresh, neg_pos_ratio=3, object_score=0.01, variance=[0.1,0.2], bg_class_id=0, use_arm_barch=False, device=None):
         super(MultiBoxLoss, self).__init__()
+        self.smooth_l1_loss = nn.SmoothL1Loss(size_average=False)
 
         self.num_classes = num_classes
         self.overlap_thresh = overlap_thresh
         self.neg_pos_ratio = neg_pos_ratio
         self.object_score = object_score
         self.variance = variance
-        self.enable_cuda = enable_cuda
         self.bg_class_id = bg_class_id
-        self.arm_barch = arm_barch
+        self.use_arm_barch = use_arm_barch
+        self.device = device
 
-    def forward(self, pred_data, priors, gt_data):
+
+    def hard_negative_mining(self, conf_loss, pos):
+        """
+        conf_loss: tensor (batch_size*8732) 先用非背景类计算loss
+        pos: tensor (batch_size, 8732) default box中和label box进行match得到的匹配的框，每个框的匹配程度iou N个图片，每个图片都有8732个default box
+        return: neg tensor,(N, 8732) boolean矩阵，为1表示是选出来的negative box
+        计算过全部default box的交叉熵之后在从负样本中选出3倍正样本的数目，然后选出来的这些pos neg的交叉熵再进行反向传播
+        """
+        batch_size, num_boxes = pos.size()
+        conf_loss = conf_loss.view(batch_size, -1)
+        conf_loss[pos] = 0
+
+        _, idx = conf_loss.sort(dim=1, descending=True)
+        _, rank = idx.sort(dim=1)
+
+        num_pos = pos.long().sum(dim=1)
+        num_neg = torch.clamp(3*num_pos, max=(num_boxes-int(num_pos.sum())-1))
+        num_neg = num_neg.unsqueeze(1)
+        neg = rank < num_neg.expand_as(rank)
+
+        return neg
+
+    def forward(self, pred_data, gt_data, priors):
         """Multibox Loss
         Args:
             pred_data (tuple): A tuple containing loc preds, conf preds,
@@ -54,57 +77,43 @@ class MultiBoxLoss(nn.Module):
                 shape: [batch_size,num_objs,5] (last idx is the label).
         """
 
-        pred_loc, pred_score = pred_data
-        num = pred_loc.size(0)
+        loc_preds, score_preds = pred_data
+        batch_size, num_boxes, _ = loc_preds.size()
         num_priors = (priors.size(0))
 
-        # match priors (default boxes) and ground truth boxes
-        target_loc = torch.Tensor(num, num_priors, 4)
-        target_score = torch.LongTensor(num, num_priors)
-        for idx in range(num):
-            gt_loc = gt_data[idx][:,:-1].data
-            gt_cls = gt_data[idx][:,-1].data
-            if self.arm_barch:
+        loc_targets = torch.Tensor(batch_size, num_priors, 4)
+        score_targets = torch.LongTensor(batch_size, num_priors)
+        for idx in range(batch_size):
+            gt_loc = gt_data[idx][:,:-1]
+            gt_cls = gt_data[idx][:,-1]
+            if self.use_arm_barch:
                 gt_cls = gt_cls > 0
-            target_loc[idx], target_score[idx] = match(self.overlap_thresh, gt_loc, gt_cls, priors.data, self.variance)
+            loc_targets[idx], score_targets[idx] = match(self.overlap_thresh, gt_loc, gt_cls, priors, self.variance)
 
-        if self.enable_cuda:
-            target_loc = target_loc.cuda()
-            target_score = target_score.cuda()
-        # wrap gt_data
-        target_loc = Variable(target_loc, requires_grad=False)
-        target_score = Variable(target_score,requires_grad=False)
+        pos = score_targets > 0
+        num_matched_boxes = pos.detach().sum()
 
-        pos = target_score > 0
-        pos_idx = pos.unsqueeze(pos.dim()).expand_as(pred_loc)
+        if num_matched_boxes == 0:
+            return torch.zeros((1), requires_grad=True)
 
-        # Localization Loss (Smooth L1)
-        # Shape: [batch,num_priors,4]
-        pred_loc_ = pred_loc[pos_idx].view(-1, 4)
-        target_loc_ = target_loc[pos_idx].view(-1, 4)
-        loss_l = F.smooth_l1_loss(pred_loc_, target_loc_, size_average=False)
+        pos_mask = pos.unsqueeze(2).expand_as(loc_preds)
+        pos_loc_preds = loc_preds[pos_mask].view(-1, 4)
+        pos_loc_targets = loc_targets[pos_mask].view(-1, 4)
+        loc_loss = self.smooth_l1_loss(pos_loc_preds, pos_loc_targets)
 
-        # Compute max conf across batch for hard negative mining
-        batch_score = pred_score.view(-1, self.num_classes)
-        loss_c = log_sum_exp(batch_score) - batch_score.gather(1, target_score.view(-1, 1))
-        # Hard Negative Mining
-        loss_c[pos] = 0 # filter out pos boxes for now
-        loss_c = loss_c.view(num, -1)
-        _, loss_idx = loss_c.sort(1, descending=True)
-        _, idx_rank = loss_idx.sort(1)
-        num_pos = pos.long().sum(1, keepdim=True)
-        num_neg = torch.clamp(self.neg_pos_ratio*num_pos, max=pos.size(1)-1)
-        neg = idx_rank < num_neg.expand_as(idx_rank)
-        # Confidence Loss Including Positive and Negative Examples
-        pos_idx = pos.unsqueeze(2).expand_as(pred_score)
-        neg_idx = neg.unsqueeze(2).expand_as(pred_score)
-        filtered_pred_score = pred_score[(pos_idx+neg_idx).gt(0)].view(-1, self.num_classes)
-        targets_weighted = target_score[(pos+neg).gt(0)]
-        loss_c = F.cross_entropy(filtered_pred_score, targets_weighted, size_average=False)
+        batch_score = score_preds.view(-1, self.num_classes)
+        conf_loss = log_sum_exp(batch_score) - batch_score.gather(1, score_targets.view(-1, 1))
+        # mining 出来的negtive box: (batch_size, 8732), 大于零的位置表示是mining出来的
+        neg = self.hard_negative_mining(conf_loss, pos)
+        neg_mask = neg.unsqueeze(2).expand_as(score_preds)
+        pos_mask = pos.unsqueeze(2).expand_as(score_preds)
 
-        # Sum of losses: L(x,c,l,g) = (Lconf(x, c) + αLloc(x,l,g)) / N
+        mask = (neg_mask + pos_mask).gt(0)
+        pos_and_neg = (pos + neg).gt(0)
+        filtered_score_preds = score_preds[mask].view(-1, self.num_classes)
+        filtered_score_targets = score_targets[pos_and_neg]
+        conf_loss = F.cross_entropy(filtered_score_preds, filtered_score_targets, size_average=False)
+        loc_loss /= num_matched_boxes.to(torch.float32)
+        conf_loss /= num_matched_boxes.to(torch.float32)
 
-        N = num_pos.data.sum()
-        loss_l/=N
-        loss_c/=N
-        return loss_l, loss_c
+        return loc_loss, conf_loss
