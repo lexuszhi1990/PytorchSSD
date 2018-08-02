@@ -6,15 +6,17 @@ import math
 import numpy as np
 
 def point_form(boxes):
-    """ Convert prior_boxes to (xmin, ymin, xmax, ymax)
+    """
+    从 (centerX, centerY, h, w)转换到(xmin,ymin,xmax,ymax)
+    Convert prior_boxes to (xmin, ymin, xmax, ymax)
     representation for comparison to point form ground truth data.
     Args:
         boxes: (tensor) center-size default boxes from priorbox layers.
     Return:
         boxes: (tensor) Converted xmin, ymin, xmax, ymax form of boxes.
     """
-    return torch.cat((boxes[:, :2] - boxes[:, 2:]/2,     # xmin, ymin
-                      boxes[:, :2] + boxes[:, 2:]/2), 1)  # xmax, ymax
+    return torch.cat((boxes[:, :2] - boxes[:, 2:]/2,
+                      boxes[:, :2] + boxes[:, 2:]/2), 1)
 
 
 def IoG(box_a, box_b):
@@ -127,23 +129,31 @@ def match(threshold, gt_loc, gt_cls, priors, variances):
         gt_loc,
         point_form(priors)
     )
-    # (Bipartite Matching)
-    best_prior_overlap, best_prior_idx = overlaps.max(1, keepdim=True)
-    # [1,num_priors] best ground truth for each prior
     best_truth_overlap, best_truth_idx = overlaps.max(0, keepdim=True)
     best_truth_idx.squeeze_(0)
     best_truth_overlap.squeeze_(0)
-    best_prior_idx.squeeze_(1)
-    best_prior_overlap.squeeze_(1)
-    best_truth_overlap.index_fill_(0, best_prior_idx, 2)  # ensure best prior
-    # TODO refactor: index  best_prior_idx with long tensor
-    # ensure every gt matches with its prior of max overlap
-    for j in range(best_prior_idx.size(0)):
-        best_truth_idx[best_prior_idx[j]] = j
-    matches = gt_loc[best_truth_idx]          # Shape: [num_priors,4]
-    conf = gt_cls[best_truth_idx]          # Shape: [num_priors]
-    conf[best_truth_overlap < threshold] = 0  # label as background
+    matches = gt_loc[best_truth_idx]
+    conf = gt_cls[best_truth_idx]
+    conf[best_truth_overlap < threshold] = 0
+    # TODO: get the reason why shold encode the matches
     loc = encode(matches, priors, variances)
+
+    # # (Bipartite Matching)
+    # best_prior_overlap, best_prior_idx = overlaps.max(1, keepdim=True)
+    # # [1,num_priors] best ground truth for each prior
+    # best_truth_idx.squeeze_(0)
+    # best_truth_overlap.squeeze_(0)
+    # best_prior_idx.squeeze_(1)
+    # best_prior_overlap.squeeze_(1)
+    # best_truth_overlap.index_fill_(0, best_prior_idx, 2)  # ensure best prior
+    # # TODO refactor: index  best_prior_idx with long tensor
+    # # ensure every gt matches with its prior of max overlap
+    # for j in range(best_prior_idx.size(0)):
+    #     best_truth_idx[best_prior_idx[j]] = j
+    # matches = gt_loc[best_truth_idx]          # Shape: [num_priors,4]
+    # conf = gt_cls[best_truth_idx]          # Shape: [num_priors]
+    # conf[best_truth_overlap < threshold] = 0  # label as background
+    # loc = encode(matches, priors, variances)
 
     return loc, conf
 
