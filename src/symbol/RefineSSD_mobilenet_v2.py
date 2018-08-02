@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from src.loss import L2Norm
-from src.utils import kaiming_weights_init, xavier, load_weights
+from src.weight_init import kaiming_weights_init, xavier
 
 def build_mobile_net_v2(width_mult=1., data_dim=3, first_channel_num=32):
 

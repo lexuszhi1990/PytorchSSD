@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.utils import kaiming_weights_init, xavier, load_weights
+from src.weight_init import kaiming_weights_init, xavier
 import logging
 
 class SEScale(nn.Module):

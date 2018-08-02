@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.utils.box_utils import match, refine_match
+from src.box_utils import match, refine_match
 
 from .repulsion_loss import RepulsionLoss
 

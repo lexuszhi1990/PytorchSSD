@@ -1,7 +1,7 @@
 import torch
 from torch.autograd import Function
 
-from src.utils.box_utils import decode, center_size
+from src.box_utils import decode, center_size
 from src.nms import pytorch_nms
 
 class Detector(Function):

@@ -5,9 +5,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-# from src.utils.box_utils import IoG, decode_new
 
-from src.utils.box_utils import rep_match, IoG
+from src.box_utils import rep_match, IoG
 
 class RepulsionLoss(nn.Module):
     def __init__(self, num_classes=2, variance=[0.1, 0.2], sigma=0., overlap_thresh=0.5, neg_pos_ratio=3, object_score=0.01, bg_class_id=0, enable_cuda=False, filter_arm_object=False):
