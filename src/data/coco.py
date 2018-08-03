@@ -12,8 +12,10 @@ import torch
 import torch.utils.data as data
 import torchvision.transforms as transforms
 
-from src.utils.pycocotools.coco import COCO
-from src.utils.pycocotools.cocoeval import COCOeval
+import sys
+sys.path.append('../../3rdparth/cocoapi/PythonAPI')
+from pycocotools.coco import COCO
+from pycocotools.cocoeval import COCOeval
 
 
 class COCODet(data.Dataset):
