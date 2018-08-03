@@ -45,7 +45,7 @@ config.voc_v1 = edict({
 })
 
 config.coco_v1 = edict({
-    'workspace': './workspace/coco-v1',
+    'workspace': './workspace/coco-mobilenet-v1',
     'dataset': 'coco',
     'root_path': '/mnt/dataset/coco',
     'train_sets' : 'train2017',
@@ -73,15 +73,15 @@ config.coco_v1 = edict({
     'base_lr': 5e-2,
     'momentum': 0.9,
     'weight_decay': 5e-4,
-    'gamma': 0.1,
+    'gamma': 0.3,
     'max_epoch': 201,
     'top_k': 200,
     'confidence_thresh': 0.05,
     'nms_thresh': 0.45,
 
     'enable_visdom': False,
-    'prefix': 'coco-resnet-v1',
+    'prefix': 'coco-resnet',
     'inteval': 10,
-    'max_per_image': 5,
+    'max_per_image': -1,
 })
 
