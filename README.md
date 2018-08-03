@@ -29,19 +29,15 @@ docker run --ipc host -v /your-dir:/app  -it --rm floydhub/pytorch:0.4.0-py3.31 
 
 ### Usage
 
-#### training on coco dataset（80 classes）
-
+#### train:
 ```
 CUDA_VISIBLE_DEVICES=0 python train.py --cuda --gpu_ids 0 --config coco_v1
 CUDA_VISIBLE_DEVICES=1 python val.py --cuda --gpu_ids 0 --ckpt_path workspace/coco-v1/coco-resnet-v1-0.pth --config coco_v1
 ```
 
-#### training on voc dataset
+#### val:
 
-`python train.py --config voc_v1`
-
-
-python val.py --config coco_v2 --ckpt_path ckpt/coco-v2/refinedet_model-0.pth
+CUDA_VISIBLE_DEVICES=1 python val.py --cuda --gpu_ids 0 --config coco_v2 --ckpt_path workspace/coco-mobilenet-v1/coco-resnet-10.pth
 
 #### inference
 

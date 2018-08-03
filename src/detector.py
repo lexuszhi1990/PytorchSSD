@@ -70,12 +70,10 @@ class Detector(Function):
         for cls_id in range(self.num_classes):
             cls_mask = conf_scores[cls_id].gt(self.conf_thresh)
             scores = conf_scores[cls_id][cls_mask]
-            if scores.dim() == 0:
+            if scores.size(0) == 0:
                 continue
             decoded_cls_mask = cls_mask.unsqueeze(1).expand_as(decoded_boxes)
             boxes = decoded_boxes[decoded_cls_mask].view(-1, 4)
-            if boxes.size(0) == 0:
-                continue
             ids, count = pytorch_nms(boxes, scores, self.nms_thresh, self.top_k)
             cls_list = torch.Tensor([1 for _ in range(self.top_k)]).unsqueeze(1).to(self.device)
             output[cls_id, :count] = torch.cat((cls_list[:count], scores[ids[:count]].unsqueeze(1), boxes[ids[:count]]), 1)

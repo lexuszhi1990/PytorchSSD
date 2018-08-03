@@ -88,7 +88,7 @@ config.coco_v1 = edict({
 config.coco_v2 = edict({
     'workspace': './workspace/coco-mobilenet-v1',
     'dataset': 'coco',
-    'model_name': 'RefineSSDSEResNeXt',
+    'model_name': 'RefineSSDMobileNet',
     'root_path': '/mnt/dataset/coco',
     'train_sets' : 'train2017',
     'val_sets' : 'val2017',
@@ -107,7 +107,7 @@ config.coco_v2 = edict({
     'variance': [0.1, 0.2],
     'clip': True,
     'width_mult': 1.,
-    'base_channel_num': 256,
+    'base_channel_num': 128,
     'use_refine': False,
     'batch_size': 64,
     'num_workers': 2,
