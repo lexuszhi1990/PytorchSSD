@@ -45,7 +45,7 @@ config.voc_v1 = edict({
 })
 
 config.coco_v1 = edict({
-    'workspace': './workspace/coco-mobilenet-v1',
+    'workspace': './workspace/coco-v2',
     'dataset': 'coco',
     'model_name': 'RefineSSDSEResNeXt',
     'root_path': '/mnt/dataset/coco',

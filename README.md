@@ -29,20 +29,24 @@ docker run --ipc host -v /your-dir:/app  -it --rm floydhub/pytorch:0.4.0-py3.31 
 
 ### Usage
 
-#### train:
+#### train
+
 ```
 CUDA_VISIBLE_DEVICES=0 python train.py --cuda --gpu_ids 0 --config coco_v1
 CUDA_VISIBLE_DEVICES=1 python val.py --cuda --gpu_ids 0 --ckpt_path workspace/coco-v1/coco-resnet-v1-0.pth --config coco_v1
 ```
 
-#### val:
+#### val
 
+```
 CUDA_VISIBLE_DEVICES=1 python val.py --cuda --gpu_ids 0 --config coco_v2 --ckpt_path workspace/coco-mobilenet-v1/coco-resnet-10.pth
+```
 
 #### inference
 
-
-`python eval.py --config coco_v2 --ckpt_path ckpt/coco-v2/refinedet_model-0.pth --img_path samples/demo/ebike-three.jpg`
+```
+python eval.py --config coco_v2 --ckpt_path workspace/coco-mobilenet-v1/coco-resnet-10.pth --img_path samples/demo/ebike-three.jpg
+```
 
 ### Todos
 - [x] upgrade framework to pytorch 0.4

@@ -62,8 +62,6 @@ if __name__ == '__main__':
         out = net(x=inputs, inference=True)  # forward pass
         detect_time = _t['im_detect'].toc()
 
-        import pdb
-        pdb.set_trace()
         _t['misc'].tic()
         arm_loc, arm_conf, odm_loc, odm_conf = out
         output = detector.forward((odm_loc, odm_conf), priors, (arm_loc, arm_conf))
@@ -74,20 +72,16 @@ if __name__ == '__main__':
     for class_id in range(1, cfg.num_classes):
         cls_output = output_np[class_id]
         dets = cls_output[cls_output[:, 1] > 0.60]
-        import pdb
-        pdb.set_trace()
         dets[:, 2:6] = np.floor(dets[:, 2:6] * basic_scale)
         for det in dets:
             cls_id, score, left, top, right, bottom = det
-            import pdb
-            pdb.set_trace()
             img_det = cv2.rectangle(img, (left, top), (right, bottom), (255, 255, 0), 1)
             img_det = cv2.putText(img_det, '%d:%.3f'%(class_id, score), (int(left), int(top)+15), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 1)
             logging.info("cat: %d, score: %.4f" % (cls_id, score))
 
-    saved_path = "%s_%s_det.png" % (Path(image_path).stem, config_id)
+    saved_path = "%s_%s_det.png" % (Path(img_path).stem, args.config)
     cv2.imwrite(saved_path, img_det)
-    logging.info('im_detect: %s, detect_time:%.3fs nms_time:%.3fs\nimage saved at %s'%(image_path, detect_time, nms_time, saved_path))
+    logging.info('im_detect: %s, detect_time:%.3fs nms_time:%.3fs\nimage saved at %s'%(img_path, detect_time, nms_time, saved_path))
 
 
     # import pdb
