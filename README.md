@@ -17,11 +17,21 @@ ssd|resneXt50|0.341|0.711|10fps
 
 ### Installation
 
-install packages with pip:
+clone the repo:
+
+`git clone --recursive https://gitlab.com/GardenOfSecret/ssd.git`
+
+If you already have cloned a repository, and then you just need to update the submodule:
+
+`git submodule update --init`
+
+more references about [git Submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules)
+
+#### install packages with pip:
 
 `pip install -i https://mirrors.aliyun.com/pypi/simple/ torch visdom graphviz easydict`
 
-run with docker:
+#### run with docker:
 
 ```shell
 docker run --ipc host -v /your-dir:/app  -it --rm floydhub/pytorch:0.4.0-py3.31 bash
