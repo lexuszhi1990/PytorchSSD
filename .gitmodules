@@ -1,0 +1,3 @@
+[submodule "3rdparty/cocoapi"]
+	path = 3rdparty/cocoapi
+	url = https://github.com/lexuszhi1990/cocoapi.git
