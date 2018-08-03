@@ -41,6 +41,13 @@ CUDA_VISIBLE_DEVICES=1 python val.py --cuda --gpu_ids 0 --ckpt_path workspace/co
 `python train.py --config voc_v1`
 
 
+python val.py --config coco_v2 --ckpt_path ckpt/coco-v2/refinedet_model-0.pth
+
+#### inference
+
+
+`python eval.py --config coco_v2 --ckpt_path ckpt/coco-v2/refinedet_model-0.pth --img_path samples/demo/ebike-three.jpg`
+
 ### Todos
 - [x] upgrade framework to pytorch 0.4
 - [ ] support atribary shape as inputs

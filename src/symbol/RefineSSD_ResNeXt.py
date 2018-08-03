@@ -175,16 +175,16 @@ class SEResNeXtFPN(nn.Module):
 
 
 class RefineSSDSEResNeXt(nn.Module):
-    def __init__(self, num_classes=81, use_refine=True, base_channel_num=256, base_mbox=3, width_mult=1.):
+    def __init__(self, cfg):
         super(RefineSSDSEResNeXt, self).__init__()
-        self.use_refine = use_refine
 
-        self.num_classes = num_classes
-        self.base_channel_num = base_channel_num
-        self.base_channel_list = [ int(base_channel_num * scale) for scale in [1, 2, 4, 8] ]
-        self.base_mbox = base_mbox
+        self.num_classes = cfg.num_classes
+        self.base_channel_num = cfg.base_channel_num
+        self.use_refine = cfg.use_refine
+        self.base_mbox = 2 * len(cfg.aspect_ratios[0]) + 1
+        self.base_channel_list = [ int(self.base_channel_num * scale) for scale in [1, 2, 4, 8] ]
 
-        self.feature_net = SEResNeXtFPN([3, 4, 6, 3], base_channel_num=base_channel_num)
+        self.feature_net = SEResNeXtFPN([3, 4, 6, 3], base_channel_num=self.base_channel_num)
         if self.use_refine:
             self.arm_loc = nn.ModuleList([
                 nn.Conv2d(self.base_channel_list[0], 4*self.base_mbox, kernel_size=3, stride=1, padding=1, bias=False),

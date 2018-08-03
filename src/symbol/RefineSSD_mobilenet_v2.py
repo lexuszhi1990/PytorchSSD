@@ -195,7 +195,17 @@ class RefineSSDMobileNet(nn.Module):
     def initialize_weights(self, ckpt_path=None):
         if ckpt_path and Path(ckpt_path).exists():
             state_dict = torch.load(ckpt_path, lambda storage, loc: storage)
-            self.load_state_dict(state_dict)
+
+            new_state_dict = OrderedDict()
+            for k, v in state_dict.items():
+                head = k[:7]
+                if head == 'module.':
+                    name = k[7:] # remove `module.`
+                else:
+                    name = k
+                new_state_dict[name] = v
+
+            self.load_state_dict(new_state_dict)
             logging.info("loading weights from %s" % ckpt_path)
         else:
             self.initialize_base_weights()

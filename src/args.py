@@ -13,9 +13,7 @@ def get_args():
 
     # eval
     parser.add_argument('--ckpt_path', type=str, help='pretrained base model')
-    parser.add_argument('--keep_results', action="store_true", default=False, help='Use cuda to train model')
-    parser.add_argument('--eval_img', type=str, default='None', help='validate image')
-
+    parser.add_argument('--img_path', type=str, default='None', help='validate image')
 
     # parser.add_argument('--workspace', default='./workspace')
     # parser.add_argument('--dataset', default='COCO', help='VOC or COCO dataset')
