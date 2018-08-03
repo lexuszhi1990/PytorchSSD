@@ -45,6 +45,10 @@ CUDA_VISIBLE_DEVICES=1 python val.py --cuda --gpu_ids 0 --config coco_v2 --ckpt_
 #### inference
 
 ```
+python eval.py --config coco_v1 --ckpt_path workspace/coco-mobilenet-v1/coco-resnet-10.pth --img_path samples/demo/ebike-three.jpg
+
+python eval.py --config coco_v1 --img_path samples/demo/ebike-three.jpg --ckpt_path workspace/coco-v1/coco-resnet-v1-0.pth
+
 python eval.py --config coco_v2 --ckpt_path workspace/coco-mobilenet-v1/coco-resnet-10.pth --img_path samples/demo/ebike-three.jpg
 ```
 

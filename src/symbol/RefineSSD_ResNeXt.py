@@ -223,7 +223,9 @@ class RefineSSDSEResNeXt(nn.Module):
                 else:
                     name = k
                 new_state_dict[name] = v
+
             self.load_state_dict(new_state_dict)
+            # self.load_state_dict(torch.load(ckpt_path))
             logging.info("load weights from %s" % ckpt_path)
         else:
             self.feature_net.initialize_base_weights()

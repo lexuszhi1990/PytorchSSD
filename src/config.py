@@ -45,7 +45,7 @@ config.voc_v1 = edict({
 })
 
 config.coco_v1 = edict({
-    'workspace': './workspace/coco-v2',
+    'workspace': './workspace/coco-v1',
     'dataset': 'coco',
     'model_name': 'RefineSSDSEResNeXt',
     'root_path': '/mnt/dataset/coco',
@@ -67,7 +67,7 @@ config.coco_v1 = edict({
     'clip': True,
     'width_mult': 1.,
     'base_channel_num': 256,
-    'use_refine': False,
+    'use_refine': True,
     'batch_size': 64,
     'num_workers': 2,
     'base_lr': 5e-2,
